@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Project "Sentinel": Agentic Attack Path Orchestration Console
+
+Project Sentinel transitions the "Antigravity" security posture dashboard from a periodic, static scanner interface to a real-time, event-driven agentic orchestrator. By utilizing Kubernetes-style sidecar security observers and a streaming Next.js Event Bus, Sentinel monitors configuration drift, calculates attack propagation vectors, and highlights prioritized remediations in under 1 second.
+
+---
+
+## Technical Stack & Architecture
+
+- **Core Framework**: Next.js App Router (React 19, Turbopack compiling).
+- **Graph Visualizer**: React Flow (for real-time path traversals, asset states, and legend indicators).
+- **Communication Layer**: Server-Sent Events (SSE) streaming (`text/event-stream`) for pushing updates without polling or reloading.
+- **Payload Contract**: Validated JSON-LD schema representing workload contexts, threat headers, payload categories, and path metadata.
+
+---
+
+## Directory Structure
+
+```text
+dae-attack-path-demo/
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── sentinel/
+│   │   │   │   ├── events/       # Server-Sent Events pipeline (ReadableStream)
+│   │   │   │   ├── publish/      # JSON-LD event ingestion and validation router
+│   │   │   │   └── store/        # Time-series audit store ledger database API
+│   │   ├── globals.css           # Dashboard layout styling and glows
+│   │   ├── page.js               # Reactive split-screen container & SSE listener
+│   ├── components/
+│   │   ├── AgentDaeChat.js       # Agent Iris welcome orchestrator
+│   │   ├── SentinelConsole.js    # Visual graph & audit replay timeline
+│   │   └── CustomNodes.js        # React Flow custom security node styling
+│   ├── lib/
+│   │   ├── eventBus.js           # Memory broker, store ledger & JSON-LD validation
+│   │   ├── sidecarSimulator.js   # Background Kubernetes workload simulators
+│   │   └── attackPathEngine.js   # Path criticality & mitigation ranking calculator
+```
+
+---
 
 ## Getting Started
 
-First, run the development server:
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Start the development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Open the Dashboard Console
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+Access the interface in your browser:
+- **Sentinel Console UI**: `http://localhost:3000`
+- **SSE Stream Endpoint**: `http://localhost:3000/api/sentinel/events`
+- **Publish Event Ingest**: `http://localhost:3000/api/sentinel/publish`
+- **Time-series Audit Ledger**: `http://localhost:3000/api/sentinel/store`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Interactive Validation Walkthrough
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **Monitored Workloads Registry**: On opening the dashboard, four sidecar telemetry agents (`workload-dev-discovery`, `workload-finance-ai`, `workload-database-core`, and `workload-vpn`) connect and report `ONLINE` health telemetry on the dashboard.
+2. **Case 1: Telemetry Config Drift**: 
+   - Under Agent Iris, trigger Case 1.
+   - The simulator publishes a `config_drift` event on the Event Bus.
+   - The Path Engine recalculates risks, shifting the visual graph node `B` (Shadow API) and `A` to `compromised` (pulsing red) and animating the active attack edge, raising the PCS score to `9.2`.
+   - Deploying the mitigation publishes `mitigation_applied`, restoring the sidecar to `SECURED` and securing the node visual state (green).
+3. **Case 2: AI Posture Telemetry**:
+   - Trigger Case 2 to simulate Prompt Injection on the AI Agent workload.
+   - The visual nodes `W2` (Finance AI Agent) and `W3` (Customer Root Database) highlight compromise states and display native threat badges (`🌐 INTERNET EXPOSED`, `🔒 SENSITIVE CUSTOMER DATA`).
+   - Merging the egress policy secures the AI sidecar and severs the prompt injection vector.
+4. **Case 3: Hypothetical CVE Injection & Prioritized Remediation**:
+   - Trigger Case 3 to simulate multiple competing vulnerabilities.
+   - Click `Simulate CVE-2024-XXXX Reachability` to fire a simulated vulnerability on the VPN workload.
+   - Inspect the prioritized remediations ranked by the engine. Deploy the highest-impact policy to sever the routes.
+5. **Timeline Replay Audit**:
+   - Pause the live stream using `Pause & Audit Replay`.
+   - Use the slider control to rewind the environment's threat history step-by-step, watching the visual graph nodes and edge animations revert to their corresponding historical state.

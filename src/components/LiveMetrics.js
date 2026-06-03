@@ -18,7 +18,9 @@ export default function LiveMetrics({ pcsScore, activePaths, isSimulating }) {
 
   // Rest timer when PCS resets
   useEffect(() => {
-    if (pcsScore === 0) setSeconds(0);
+    if (pcsScore !== 0) return undefined;
+    const reset = setTimeout(() => setSeconds(0), 0);
+    return () => clearTimeout(reset);
   }, [pcsScore]);
 
   const formatTime = (totalSeconds) => {

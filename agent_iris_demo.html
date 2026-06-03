@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Iris Attack Path | Standalone Interactive Demo</title>
+  
+  <!-- Load Outfit font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Load React & ReactDOM (production) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Load Babel Standalone for JSX compilation in browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #0b0f19;
+      --panel-bg: rgba(20, 26, 43, 0.75);
+      --border-color: rgba(255, 255, 255, 0.1);
+      --accent-blue: #3b82f6;
+      --accent-red: #ef4444;
+      --accent-green: #10b981;
+      --accent-purple: #8b5cf6;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(20, 26, 43, 1) 0, transparent 50%), 
+        radial-gradient(at 50% 100%, rgba(15, 23, 42, 1) 0, transparent 50%);
+      color: var(--text-primary);
+      font-family: 'Outfit', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+    }
+
+    /* Standalone Container */
+    .dashboard-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+    }
+
+    .agent-chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 90vh;
+      max-width: 700px;
+      width: 100%;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+      margin: 0 auto;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(255,255,255,0.02);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .agent-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .message-row { display: flex; gap: 8px; width: 100%; align-items: flex-end; }
+    .message-row.user { justify-content: flex-end; }
+    .message-row.user .chat-bubble { background: #1e293b; color: white; border: none; }
+
+    .message-content { max-width: 85%; }
+    
+    .mini-avatar { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--accent-blue); font-size: 12px; }
+    .mini-avatar.user { background: #475569; }
+
+    .chat-bubble {
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(255,255,255,0.05);
+      font-size: 13px;
+      line-height: 1.5;
+      color: #e2e8f0;
+    }
+
+    .card-container {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 16px;
+      width: 100%;
+    }
+    .card-container.border-green { border-left: 4px solid var(--accent-green); }
+
+    .btn-primary {
+      background: white; color: black; border: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255,255,255,0.15); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .btn-outline { background: transparent; color: white; border: 1px solid var(--border-color); padding: 10px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-outline:hover:not(:disabled) { background: rgba(255,255,255,0.05); }
+
+    /* Glowing Bullet Syncing */
+    .capability-bullet {
+      transition: all 0.3s ease;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 4px;
+    }
+
+    .capability-bullet.glow {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa !important;
+      text-shadow: 0 0 8px rgba(96, 165, 250, 0.6);
+      transform: translateX(4px);
+    }
+
+    .capability-bullet.completed {
+      color: var(--accent-green) !important;
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+
+    /* CVE & Mitigation Cards */
+    .cve-list { display: flex; flex-direction: column; gap: 8px; }
+    .cve-card {
+      padding: 12px; border-radius: 8px; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: 0.2s;
+    }
+    .cve-card:hover { border-color: rgba(255,255,255,0.3); }
+    .cve-card.selected { border-color: var(--accent-blue); background: rgba(59,130,246,0.1); }
+
+    .mitigation-card {
+      border: 1px solid rgba(16,185,129,0.3);
+      background: rgba(16,185,129,0.05);
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+
+    /* Typing indicators */
+    .typing-indicator {
+      display: flex; gap: 4px; padding: 12px 16px; background: rgba(30, 41, 59, 0.6); border-radius: 12px; width: fit-content;
+    }
+    .dot { width: 6px; height: 6px; background: #cbd5e1; border-radius: 50%; animation: wave 1.3s linear infinite; }
+    .dot:nth-child(2) { animation-delay: -1.1s; }
+    .dot:nth-child(3) { animation-delay: -0.9s; }
+    @keyframes wave { 0%, 60%, 100% { transform: initial; } 30% { transform: translateY(-4px); } }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+  </style>
+</head>
+<body>
+
+  <div id="root" class="dashboard-container"></div>
+
+  <!-- React Code inside Babel Script -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    // --- Standalone Mock API Handler ---
+    const callAttackPathApi = async (options = {}) => {
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      if (options.method === 'GET') {
+        if (options.scenarioId === 'critical-attack-path-discovery') {
+          return {
+            analysis: {
+              activePaths: 3,
+              pcsScore: 9.2,
+              paths: [
+                { id: 'PATH-001', title: 'Discovery Asset -> Active Directory Core', techniques: ['T1190', 'T1505', 'T1003', 'T1550'], nodeIds: [1,2,3,4,5], pcs: 9.2 },
+                { id: 'PATH-002', title: 'External DMZ -> Active Directory Core', techniques: ['T1611', 'T1068'], nodeIds: [1,2,3,4], pcs: 7.2 },
+                { id: 'PATH-003', title: 'Phishing Target -> Active Directory Core', techniques: ['T1566', 'T1078', 'T1550'], nodeIds: [1,2,3,4], pcs: 8.5 }
+              ]
+            }
+          };
+        }
+        if (options.scenarioId === 'ai-agent-posture') {
+          return {
+            analysis: {
+              activePaths: 1,
+              pcsScore: 10.0
+            }
+          };
+        }
+        return {
+          analysis: {
+            activePaths: 4,
+            pcsScore: 9.2,
+            topPath: { title: 'Discovery Asset -> Active Directory Core', owners: ['DevOps', 'AppSec', 'Platform', 'IAM'], id: 'PATH-002' },
+            chokePoints: [{ label: 'BOLA Exploit' }]
+          }
+        };
+      }
+
+      if (options.body?.intent === 'simulate') {
+        if (options.body.scenarioId === 'ai-agent-posture') {
+          return { selectedPath: { pcs: 10.0 } };
+        }
+        if (options.body.scenarioId === 'critical-attack-path-discovery') {
+          return { selectedPath: { pcs: 9.2 } };
+        }
+        return {
+          selectedPath: {
+            id: 'PATH-002',
+            pcs: 9.2,
+            techniques: ['T1190', 'T1505', 'T1003', 'T1550'],
+            evidence: ['Shadow API endpoint lacks object-level authorization.'],
+            pcsBreakdown: [
+              { label: 'Exploit confidence', value: 8.5, weight: 'Composite edge risk.' },
+              { label: 'Crown-jewel value', value: 1.8, weight: 'AD Core value.' },
+              { label: 'Blast radius', value: 0.5, weight: '2 exposed databases.' },
+              { label: 'Convergence bonus', value: 0.7, weight: 'Crosses choke point.' },
+              { label: 'Final PCS', value: 9.2, weight: 'Normalized risk score.' }
+            ]
+          },
+          blastRadius: [{ id: 'BR1', label: 'HR Database' }, { id: 'BR2', label: 'Finance API' }],
+          mitigationOptions: [
+            { id: 'segmentation-mfa', label: 'Segment Network + MFA', targetNode: 'F', blockedEdges: ['eC-F', 'eK-F', 'eF-G'], deployTime: 'Minutes', downtime: 'None', approvalGate: 'IAM and Network approval', policyType: 'NetworkPolicy + MFA', rollback: 'Disable rule', residualRisk: 'Very low', effectiveness: 0.94, summary: 'Blocks movement.', owner: 'IAM', pathsClosed: 2, scoreReduction: 0.7, residualPcs: 8.5 },
+            { id: 'patch-shadow-api', label: 'Patch CVE-2023-50164', targetNode: 'B', blockedEdges: ['eA-B', 'eB-C'], deployTime: '4 hours', downtime: 'Maintenance window', approvalGate: 'CAB approval', policyType: 'Patch PR', rollback: 'Revert PR', residualRisk: 'Low', effectiveness: 0.86, summary: 'BOLA fix.', owner: 'AppSec', pathsClosed: 2, scoreReduction: 0.7, residualPcs: 8.5 }
+          ]
+        };
+      }
+
+      if (options.body?.intent === 'mitigate') {
+        if (options.body.scenarioId === 'ai-agent-posture') {
+          return { pcsScore: 0.0, activePaths: 0 };
+        }
+        if (options.body.scenarioId === 'critical-attack-path-discovery') {
+          return { pcsScore: 7.7, activePaths: 2 };
+        }
+        return {
+          mitigation: {
+            label: 'Segment Network + MFA',
+            targetNode: 'F',
+            approvalGate: 'IAM and Network dual approval',
+            rollback: 'Disable conditional access rule'
+          },
+          pcsScore: 8.5,
+          activePaths: 2
+        };
+      }
+
+      if (options.body?.intent === 'policy') {
+        return {
+          type: 'NetworkPolicy + MFA',
+          content: `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: block-identity-provider-lateral-movement
+spec:
+  podSelector:
+    matchLabels:
+      app: identity-provider`
+        };
+      }
+
+      if (options.body?.intent === 'report') {
+        return {
+          headline: 'Network Segmentation reduces top PCS from 9.2 to 8.5.',
+          businessImpact: '2 blast-radius assets protected; residual paths fall to 2.',
+          technicalSummary: 'Mitigated identity provider lateral movement.',
+          recommendedAction: 'Apply Istio AuthorizationPolicy.',
+          approvalGate: 'Security CAB approval.',
+          rollback: 'Disable rule.'
+        };
+      }
+
+      if (options.body?.intent === 'what-if') {
+        return {
+          answer: 'Removing VPN gateway access severs Phase 1 phishing route. Top PCS score falls to 8.5.'
+        };
+      }
+    };
+
+    // --- Standalone Agent Iris UI component ---
+    function AgentDaeChat() {
+      const [messages, setMessages] = useState([]);
+      const [chatPhase, setChatPhase] = useState('intro');
+      const [selectedPath, setSelectedPath] = useState('');
+      const [isTyping, setIsTyping] = useState(false);
+      const [showAudit, setShowAudit] = useState(false);
+      const [auditLogs, setAuditLogs] = useState([]);
+      const [phase3Analysis, setPhase3Analysis] = useState(null);
+      const [phase3Simulation, setPhase3Simulation] = useState(null);
+      const [phase3Remediation, setPhase3Remediation] = useState(null);
+      const [phase3Policy, setPhase3Policy] = useState(null);
+      const [phase3Report, setPhase3Report] = useState(null);
+      const [whatIfAnswer, setWhatIfAnswer] = useState('');
+      
+      const [hoveredPhase, setHoveredPhase] = useState(null);
+      const [completedPhases, setCompletedPhases] = useState({ phase1: false, phase2: false, phase3: false });
+
+      const endOfChatRef = useRef(null);
+      const initRef = useRef(false);
+
+      const pushMessage = useCallback((msg, delay) => {
+        setIsTyping(true);
+        setTimeout(() => {
+          setIsTyping(false);
+          setMessages(prev => [...prev, msg]);
+          if (chatPhase.startsWith('phase3')) {
+             setAuditLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), text: `${msg.identity || 'System'}: ${msg.content || 'Action executed'}` }]);
+          }
+        }, delay);
+      }, [chatPhase]);
+
+      useEffect(() => {
+        if (chatPhase === 'intro' && messages.length === 0 && !initRef.current) {
+          initRef.current = true;
+          pushMessage({ sender: 'agent', identity: 'Mapping Agent', color: '#3b82f6', type: 'intro_prompt' }, 1200);
+        }
+        endOfChatRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, [chatPhase, messages.length, pushMessage]);
+
+      const handleStartScoping = async () => {
+        setChatPhase('discovery');
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Yes, start critical attack path discovery" }]);
+        
+        setTimeout(() => {
+            pushMessage({ sender: 'agent', identity: 'Mapping Agent', color: '#3b82f6', type: 'text', content: "Validating your topology, hold tight..." }, 1000);
+        }, 1200);
+
+        try {
+          const result = await callAttackPathApi({ method: 'GET', scenarioId: 'critical-attack-path-discovery' });
+          const apiPaths = result.analysis.paths.map(p => ({
+            id: p.id + ': ' + p.title,
+            nexus: p.techniques.join(', '),
+            nodes: p.nodeIds.length,
+            score: p.pcs
+          }));
+
+          setTimeout(() => {
+              pushMessage({ sender: 'agent', identity: 'Mapping Agent', color: '#3b82f6', type: 'text', content: `You're off to a great start! I've analyzed ${result.analysis.activePaths} critical attack paths converging on your core assets. Please select an attack path to proceed further with the flow` }, 4500);
+          }, 1200);
+
+          setTimeout(() => {
+              setMessages(prev => [...prev, { sender: 'agent', type: 'path_selection', data: apiPaths }]);
+              setChatPhase('selection');
+          }, 7000);
+        } catch (error) {
+          setMessages(prev => [...prev, { sender: 'agent', type: 'text', content: `API path discovery failed: ${error.message}` }]);
+          setChatPhase('intro');
+        }
+      };
+
+      const handlePathSelect = (pathId) => {
+        setSelectedPath(pathId);
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: `Validate ${pathId}` }]);
+        
+        setTimeout(() => {
+           pushMessage({ sender: 'agent', identity: 'Simulation Agent', color: '#a855f7', type: 'text', content: `Simulation Agent engaging. I will execute a safe exploit validation simulating a lateral movement chain along this path.` }, 1500);
+        }, 500);
+
+        setTimeout(() => {
+           setMessages(prev => [...prev, { sender: 'agent', type: 'assessment_action', pathId: pathId }]);
+        }, 2500);
+      };
+
+      const handleRunAssessment = async () => {
+        setChatPhase('scanning');
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Simulate Attack Path" }]);
+        setIsTyping(true);
+        
+        try {
+          const pathCode = selectedPath.split(':')[0];
+          const result = await callAttackPathApi({ 
+            body: { 
+              intent: 'simulate', 
+              scenarioId: 'critical-attack-path-discovery',
+              pathId: pathCode 
+            } 
+          });
+          
+          setTimeout(() => {
+            setIsTyping(false);
+            setMessages(prev => [...prev, { sender: 'agent', type: 'scanning_results', pathId: selectedPath }]);
+            setChatPhase('remediation_options');
+          }, 4500);
+        } catch (error) {
+          setIsTyping(false);
+          setMessages(prev => [...prev, { sender: 'agent', type: 'text', content: `Simulation failed: ${error.message}` }]);
+        }
+      };
+
+      const handleViewRemediation = () => {
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "View Remediation Options" }]);
+        setTimeout(() => {
+           pushMessage({ sender: 'agent', identity: 'Remediation Agent', color: '#fb923c', type: 'mitigation_options' }, 2000);
+        }, 500);
+      };
+
+      const handleMitigate = async () => {
+        setChatPhase('fixing');
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Deploy Mitigation + Revalidate" }]);
+        
+        try {
+          const result = await callAttackPathApi({ 
+            body: { 
+              intent: 'mitigate', 
+              scenarioId: 'critical-attack-path-discovery',
+              mitigationId: 'waf-rule'
+            } 
+          });
+          
+          setTimeout(() => {
+             pushMessage({ sender: 'agent', identity: 'Remediation Agent', color: '#fb923c', type: 'text', content: `Mitigation deployment initiated for ${selectedPath}. Target: Node B (Shadow API). Circuit breaker applied.` }, 1500);
+          }, 500);
+          
+          setTimeout(() => {
+             setMessages(prev => [...prev, { sender: 'agent', type: 'mitigation_success' }]);
+          }, 3500);
+
+          setTimeout(() => {
+             setIsTyping(true);
+          }, 4500);
+
+          setTimeout(() => {
+             setIsTyping(false);
+             setMessages(prev => [...prev, { sender: 'agent', type: 'revalidation_results' }]);
+             setChatPhase('complete');
+             setCompletedPhases(prev => ({ ...prev, phase1: true }));
+          }, 6500);
+        } catch (error) {
+          setMessages(prev => [...prev, { sender: 'agent', type: 'text', content: `Mitigation failed: ${error.message}` }]);
+        }
+      };
+
+      const handleWhyRecommendation = () => {
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Why did you recommend this?" }]);
+        setTimeout(() => {
+           pushMessage({ 
+             sender: 'agent', 
+             identity: 'Remediation Agent', 
+             color: '#fb923c', 
+             type: 'text', 
+             content: "I recommended a Hardware MFA because the simulation showed the attacker successfully bypasses traditional password-based sessions via NTLM extraction at Node F. Deploying MFA acts as an immediate circuit breaker." 
+           }, 1500);
+        }, 500);
+      };
+
+      const handleExportPaC = () => {
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Export Policy-as-Code (Terraform)" }]);
+        setTimeout(() => {
+           pushMessage({ 
+             sender: 'agent', 
+             identity: 'Remediation Agent', 
+             color: '#fb923c', 
+             type: 'pac_export' 
+           }, 1500);
+        }, 500);
+      };
+
+      const handleWhatIf = () => {
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "What if we move this database to a different VPC?" }]);
+        setTimeout(() => {
+           pushMessage({ 
+             sender: 'agent', 
+             identity: 'Simulation Agent', 
+             color: '#a855f7', 
+             type: 'what_if_result' 
+           }, 1500);
+        }, 500);
+      };
+
+      const handlePhase1Report = () => {
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Generate Agent Iris Report" }]);
+        setTimeout(() => {
+           setMessages(prev => [...prev, { sender: 'agent', type: 'phase1_report' }]);
+        }, 700);
+      };
+
+      const handleGenerateReport = () => {
+        setChatPhase('generating_report');
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Generate Executive Report" }]);
+        
+        setTimeout(() => {
+           pushMessage({ 
+             sender: 'agent', 
+             identity: 'Reporting Agent', 
+             color: '#14b8a6', 
+             type: 'text',
+             content: "Compiling executive summary of the simulated attack path, mitigations applied, and business impact..."
+           }, 500);
+        }, 500);
+
+        setTimeout(() => {
+           setMessages(prev => [...prev, { sender: 'agent', type: 'executive_report' }]);
+           setChatPhase('report_generated');
+        }, 2500);
+      };
+
+      const handleAgentReset = () => {
+        initRef.current = false;
+        setMessages([]);
+        setSelectedPath('');
+        setChatPhase('intro');
+        setPhase3Analysis(null);
+        setPhase3Simulation(null);
+        setPhase3Remediation(null);
+        setPhase3Policy(null);
+        setPhase3Report(null);
+        setWhatIfAnswer('');
+        setCompletedPhases({ phase1: false, phase2: false, phase3: false });
+      };
+
+      const handleStartPhase2 = async () => {
+        setChatPhase('phase2_discovery');
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Begin Phase 2: AI Agent Posture Validation" }]);
+        
+        setTimeout(() => {
+            pushMessage({ sender: 'agent', identity: 'Mapping Agent', color: '#3b82f6', type: 'text', content: "I am now shifting focus to your AI supply chain. I am now building a dynamic inventory of your AI based applications to understand what AI related implementations your teams are doing" }, 1500);
+        }, 500);
+
+        try {
+          const result = await callAttackPathApi({ method: 'GET', scenarioId: 'ai-agent-posture' });
+
+          setTimeout(() => {
+              pushMessage({ sender: 'agent', identity: 'Mapping Agent', color: '#3b82f6', type: 'text', content: "I have successfully mapped the new Finance AI architecture. I am natively flagging that this AI agent is currently 🌐 Internet Exposed and possesses active bindings to 🔒 Sensitive Customer Data." }, 4500);
+          }, 1500);
+
+          setTimeout(() => {
+              setMessages(prev => [...prev, { sender: 'agent', type: 'phase2_review_prompt' }]);
+              setChatPhase('phase2_review');
+          }, 8000);
+        } catch (error) {
+          setMessages(prev => [...prev, { sender: 'agent', type: 'text', content: `AI inventory mapping failed: ${error.message}` }]);
+          setChatPhase('intro');
+        }
+      };
+
+      const handlePhase2Simulate = async () => {
+         setChatPhase('phase2_simulating');
+         setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Authorize Security Review Simulation" }]);
+         
+         setTimeout(() => {
+            pushMessage({ sender: 'agent', identity: 'Simulation Agent', color: '#a855f7', type: 'text', content: "I am now taking over to conduct an automated security review at AI-speed without requiring manual DevOps reviews. I am simulating an external Prompt Injection attack against the Finance AI Agent to see if it can be manipulated into leaking the Customer Root Database." }, 1000);
+         }, 500);
+
+         try {
+           const result = await callAttackPathApi({ 
+             body: { 
+               intent: 'simulate', 
+               scenarioId: 'ai-agent-posture',
+               pathId: 'PATH-001'
+             } 
+           });
+
+           setTimeout(() => {
+              setMessages(prev => [...prev, { sender: 'agent', type: 'phase2_remediation_prompt' }]);
+              setChatPhase('phase2_remediation');
+           }, 6000);
+         } catch (error) {
+           setMessages(prev => [...prev, { sender: 'agent', type: 'text', content: `Simulation failed: ${error.message}` }]);
+         }
+      };
+
+      const handlePhase2Mitigate = async () => {
+         setChatPhase('phase2_complete');
+         setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Authorize Dev Handoff & Secure" }]);
+         
+         try {
+           const result = await callAttackPathApi({ 
+             body: { 
+               intent: 'mitigate', 
+               scenarioId: 'ai-agent-posture',
+               mitigationId: 'secure-ai-egress' 
+             } 
+           });
+
+           setTimeout(() => {
+              setMessages(prev => [...prev, { sender: 'agent', type: 'mitigation_success' }]);
+           }, 1500);
+           
+           setTimeout(() => {
+              setIsTyping(true);
+           }, 2500);
+
+           setTimeout(() => {
+              setIsTyping(false);
+              setMessages(prev => [...prev, { sender: 'agent', type: 'phase2_revalidation_results' }]);
+              setCompletedPhases(prev => ({ ...prev, phase2: true }));
+           }, 4500);
+         } catch (error) {
+           setMessages(prev => [...prev, { sender: 'agent', type: 'text', content: `Mitigation failed: ${error.message}` }]);
+         }
+      };
+
+      const handleStartPhase3 = async () => {
+        setChatPhase('phase3_discovery');
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Begin Phase 3: Advanced Command Center" }]);
+        
+        setTimeout(() => {
+            pushMessage({ sender: 'agent', identity: 'Mapping Agent', color: '#3b82f6', type: 'text', content: "Executing advanced parallel topography scan..." }, 1000);
+        }, 500);
+
+        try {
+          const result = await callAttackPathApi({ method: 'GET' });
+          setPhase3Analysis(result.analysis);
+
+          setTimeout(() => {
+              const choke = result.analysis.chokePoints[0];
+              pushMessage({ sender: 'agent', identity: 'Mapping Agent', color: '#3b82f6', type: 'text', content: `I discovered ${result.analysis.activePaths} viable attack paths. ${result.analysis.topPath.title} is currently highest risk at PCS ${result.analysis.pcsScore.toFixed(1)}. The strongest convergence point is ${choke?.label || 'the Shadow API'}.` }, 4500);
+          }, 500);
+
+          setTimeout(() => {
+              setMessages(prev => [...prev, { sender: 'agent', type: 'phase3_selection' }]);
+              setChatPhase('phase3_selection');
+          }, 7500);
+        } catch (error) {
+          setMessages(prev => [...prev, { sender: 'agent', type: 'text', content: `Backend analysis failed: ${error.message}` }]);
+          setChatPhase('intro');
+        }
+      };
+
+      const handlePhase3Simulate = async () => {
+        setChatPhase('phase3_simulating');
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Simulate Prioritized Path & Enumerate Blast Radius" }]);
+        setAuditLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), text: `System: Backend path traversal requested` }]);
+        
+        try {
+          const result = await callAttackPathApi({ body: { intent: 'simulate', pathId: phase3Analysis?.topPath?.id } });
+          setPhase3Simulation(result);
+
+          setTimeout(() => {
+             pushMessage({ sender: 'agent', identity: 'Simulation Agent', color: '#a855f7', type: 'text', content: `Traversing ${result.selectedPath.id} with ${result.selectedPath.techniques.join(', ')} and confidence scoring...` }, 500);
+          }, 500);
+
+          setTimeout(() => {
+             setMessages(prev => [...prev, { sender: 'agent', type: 'phase3_blast_radius' }]);
+             setAuditLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), text: `Simulation Agent: PCS ${result.selectedPath.pcs.toFixed(1)}. ${result.blastRadius.length} blast-radius assets exposed.` }]);
+             setChatPhase('phase3_remediation_options');
+          }, 5500);
+        } catch (error) {
+          setMessages(prev => [...prev, { sender: 'agent', type: 'text', content: `Simulation failed: ${error.message}` }]);
+        }
+      };
+
+      const handlePhase3Mitigate = async (option) => {
+        setChatPhase('phase3_fixing');
+        const mitigationId = option?.id || option;
+        const mitigationLabel = option?.label || option;
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: `Deploy ${mitigationLabel}` }]);
+        
+        try {
+          const result = await callAttackPathApi({ body: { intent: 'mitigate', mitigationId } });
+          setPhase3Remediation(result);
+          const [policy, report] = await Promise.all([
+            callAttackPathApi({ body: { intent: 'policy', mitigationId } }),
+            callAttackPathApi({ body: { intent: 'report', mitigationId } }),
+          ]);
+          setPhase3Policy(policy);
+          setPhase3Report(report);
+
+          setTimeout(() => {
+             pushMessage({ sender: 'agent', identity: 'Remediation Agent', color: '#fb923c', type: 'text', content: `Applying ${result.mitigation.label}. Target: ${result.mitigation.targetNode}. Expected PCS reduction: ${result.mitigation.scoreReduction.toFixed(1)}.` }, 1000);
+          }, 500);
+        
+          setTimeout(() => {
+             setMessages(prev => [...prev, { sender: 'agent', type: 'mitigation_success' }]);
+          }, 3000);
+
+          setTimeout(() => {
+             setMessages(prev => [...prev, { sender: 'agent', type: 'phase3_bypass_prompt' }]);
+             setChatPhase('phase3_bypass');
+          }, 6000);
+        } catch (error) {
+          setMessages(prev => [...prev, { sender: 'agent', type: 'text', content: `Mitigation failed: ${error.message}` }]);
+        }
+      };
+
+      const handlePhase3Bypass = () => {
+        setChatPhase('phase3_bypassing');
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Yes, simulate bypass" }]);
+        
+        setTimeout(() => {
+           pushMessage({ sender: 'agent', identity: 'Simulation Agent', color: '#a855f7', type: 'text', content: "Attempting alternate traversal via T1059 (Command and Scripting Interpreter)..." }, 1000);
+        }, 500);
+
+        setTimeout(() => {
+           setMessages(prev => [...prev, { sender: 'agent', type: 'phase3_complete' }]);
+           setChatPhase('phase3_complete');
+           setCompletedPhases(prev => ({ ...prev, phase3: true }));
+        }, 4500);
+      };
+
+      const handlePhase3PolicyPreview = () => {
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Show policy preview and approval package" }]);
+        setTimeout(() => {
+           setMessages(prev => [...prev, { sender: 'agent', type: 'phase3_policy_preview' }]);
+        }, 700);
+      };
+
+      const handlePhase3Report = () => {
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Generate executive and technical report" }]);
+        setTimeout(() => {
+           setMessages(prev => [...prev, { sender: 'agent', type: 'phase3_report' }]);
+        }, 700);
+      };
+
+      const handlePhase3NLQ = async (e) => {
+        e.preventDefault();
+        const q = e.target.elements.q.value;
+        if (!q) return;
+        setMessages(prev => [...prev, { sender: 'user', type: 'text', content: q }]);
+        e.target.reset();
+        
+        try {
+          const result = await callAttackPathApi({ body: { intent: 'what-if', question: q } });
+          setWhatIfAnswer(result.answer);
+          setTimeout(() => {
+             pushMessage({ sender: 'agent', identity: 'Analytics Agent', color: '#6366f1', type: 'text', content: result.answer }, 1000);
+          }, 500);
+        } catch (error) {
+          setWhatIfAnswer('');
+          setMessages(prev => [...prev, { sender: 'agent', type: 'text', content: `What-if analysis failed: ${error.message}` }]);
+        }
+      };
+
+      const renderMessageContent = (msg, i) => {
+        switch (msg.type) {
+          case 'text':
+            return <div className="chat-bubble">{msg.content}</div>;
+
+          case 'intro_prompt':
+             return (
+               <div className="card-container text-left" style={{marginTop:'4px', marginBottom:'12px'}}>
+                  <p style={{marginBottom: '12px', fontSize: '13px', lineHeight: '1.4'}}>
+                     Hello! I am <strong>Agent Iris</strong>.
+                  </p>
+                  <p style={{marginBottom: '4px', fontSize: '12px', color: '#94a3b8'}}>I perform the following actions:</p>
+                  <ul style={{fontSize: '12px', paddingLeft: '24px', marginBottom: '12px', color: '#cbd5e1', listStyleType: 'disc'}}>
+                     <li className={`capability-bullet ${hoveredPhase === 'phase1' ? 'glow' : ''} ${completedPhases.phase1 ? 'completed' : ''}`}>
+                        {completedPhases.phase1 ? '✔ ' : '○ '}Autonomous critical attack path & AI supply chain discovery
+                     </li>
+                     <li className={`capability-bullet ${hoveredPhase === 'phase2' ? 'glow' : ''} ${completedPhases.phase2 ? 'completed' : ''}`}>
+                        {completedPhases.phase2 ? '✔ ' : '○ '}Real-time Lateral Movement & AI Posture Simulation
+                     </li>
+                     <li className={`capability-bullet ${hoveredPhase === 'phase3' ? 'glow' : ''} ${completedPhases.phase3 ? 'completed' : ''}`}>
+                        {completedPhases.phase3 ? '✔ ' : '○ '}Target-specific Threat Remediation
+                     </li>
+                  </ul>
+                  <p style={{marginBottom: '4px', fontSize: '12px', color: '#94a3b8'}}>Which give you the following benefits:</p>
+                  <ul style={{fontSize: '12px', paddingLeft: '24px', marginBottom: '16px', color: '#cbd5e1', listStyleType: 'disc'}}>
+                     <li>Drastically Reduced MTTR</li>
+                     <li>Preemptive Choke-point Identification</li>
+                     <li>Elimination of Legacy Manual Friction</li>
+                  </ul>
+                  <p style={{marginBottom: '16px', fontSize: '12px', fontWeight: 'bold', color: '#facc15'}}>
+                     Which demonstration phase would you like to execute?
+                  </p>
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                     <button 
+                       className="btn-primary" 
+                       style={{width:'100%'}} 
+                       onClick={handleStartScoping} 
+                       disabled={chatPhase !== 'intro'}
+                       onMouseEnter={() => setHoveredPhase('phase1')}
+                       onMouseLeave={() => setHoveredPhase(null)}
+                     >
+                       Phase 1: Critical Attack Path Discovery
+                     </button>
+                     <button 
+                       className="btn-primary" 
+                       style={{width:'100%', background: '#10b981'}} 
+                       onClick={handleStartPhase2} 
+                       disabled={chatPhase !== 'intro'}
+                       onMouseEnter={() => setHoveredPhase('phase2')}
+                       onMouseLeave={() => setHoveredPhase(null)}
+                     >
+                       Phase 2: AI Agent Posture Validation
+                     </button>
+                     <button 
+                       className="btn-primary" 
+                       style={{width:'100%', background: '#eab308'}} 
+                       onClick={handleStartPhase3} 
+                       disabled={chatPhase !== 'intro'}
+                       onMouseEnter={() => setHoveredPhase('phase3')}
+                       onMouseLeave={() => setHoveredPhase(null)}
+                     >
+                       Phase 3: Advanced Command Center
+                     </button>
+                  </div>
+               </div>
+             );
+          
+          case 'path_selection':
+            return (
+              <div className="card-container">
+                <h4><span style={{color:'#facc15'}}>★</span> Recommendation</h4>
+                <div className="cve-list mt-2" style={{marginTop:'8px'}}>
+                  {msg.data.map(p => (
+                    <div key={p.id} className={`cve-card ${selectedPath === p.id ? 'selected' : ''}`} onClick={() => handlePathSelect(p.id)}>
+                       <div style={{fontWeight:600}}>{p.id}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+
+          case 'assessment_action':
+             return (
+               <div className="card-container text-right" style={{textAlign: 'right'}}>
+                 <button className="btn-primary" onClick={handleRunAssessment} disabled={chatPhase !== 'selection'}>
+                   Simulate Attack Path
+                 </button>
+               </div>
+             );
+
+          case 'scanning_results':
+             return (
+               <div className="card-container">
+                  <div style={{display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px'}}>
+                     <span style={{fontSize:'10px', background:'#a855f7', padding:'2px 6px', borderRadius:'4px', color:'white', fontWeight:'bold'}}>SIMULATION AGENT</span>
+                     <h4>Lateral Movement Achieved</h4>
+                  </div>
+                  <p style={{fontSize:'12px', marginBottom:'12px'}}>
+                    Simulation traversed successfully. Shadow API breached. Path Criticality Score (PCS) skyrocketed from 9.6 to 9.9.
+                  </p>
+                  <button className="btn-outline" style={{width:'100%'}} onClick={handleViewRemediation} disabled={chatPhase !== 'remediation_options'}>
+                    View Remediation Options
+                  </button>
+               </div>
+             );
+
+          case 'mitigation_options':
+             return (
+               <div className="card-container">
+                 <div style={{display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px'}}>
+                     <span style={{fontSize:'10px', background:'#fb923c', padding:'2px 6px', borderRadius:'4px', color:'white', fontWeight:'bold'}}>REMEDIATION AGENT</span>
+                 </div>
+                 <p style={{fontSize:'12px', marginBottom:'12px'}}>I recommend severing the choke point immediately.</p>
+                 <p style={{fontSize:'12px', marginBottom:'12px', color: '#10b981'}}><strong>Business Impact Projection:</strong> Severing this path protects an estimated $2.4M in daily transaction volume facilitated by this API.</p>
+                 <div className="mitigation-card mt-2">
+                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                      <span style={{fontWeight:600, color:'#10b981'}}>1 Mitigation Option</span>
+                      <span style={{fontSize: '9px', background: '#3b82f6', color: 'white', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap'}}>Closes 2 additional paths</span>
+                    </div>
+                    <div style={{marginTop:'8px', fontSize:'12px'}}>
+                      Deploy Virtual WAF & Enforce Hardware MFA Circuit Breaker <br/>
+                      Target: Node B (Shadow API)
+                    </div>
+                    <button className="btn-outline" style={{marginTop:'12px', fontSize: '10px', padding: '4px 8px'}} onClick={handleWhyRecommendation} disabled={chatPhase !== 'remediation_options'}>
+                       Why this recommendation?
+                    </button>
+                 </div>
+                 <div style={{display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px'}}>
+                     <button className="btn-primary" style={{width:'100%'}} onClick={handleMitigate} disabled={chatPhase !== 'remediation_options'}>
+                       Deploy Mitigation + Revalidate
+                     </button>
+                     <button className="btn-outline" style={{width:'100%'}} onClick={handleExportPaC} disabled={chatPhase !== 'remediation_options'}>
+                       Export Policy-as-Code (Terraform)
+                     </button>
+                     <button className="btn-outline" style={{width:'100%'}} onClick={handleWhatIf} disabled={chatPhase !== 'remediation_options'}>
+                       What-If Sandbox: Move DB to isolated VPC
+                     </button>
+                 </div>
+               </div>
+             );
+
+          case 'mitigation_success':
+             return (
+               <div className="card-container border-green">
+                  <div style={{color:'#10b981', fontWeight:600, marginBottom:'8px'}}>✔ Mitigation Deployment</div>
+                  <p style={{fontSize:'12px'}}>Re-launching Agent Iris simulation across the topography to verify remediation effectiveness...</p>
+               </div>
+             );
+
+          case 'revalidation_results':
+             return (
+               <div className="card-container">
+                  <h4 style={{color:'#10b981'}}>Path Completely Severed</h4>
+                  <p style={{fontSize:'12px', marginTop:'12px'}}>⭐ Done! Your path validation summary has been sent. The PCS score dropped safely to 7.7.</p>
+                  {chatPhase === 'complete' && (
+                     <>
+                       <button className="btn-outline" style={{marginTop:'12px', width:'100%'}} onClick={handlePhase1Report}>
+                         Generate Agent Iris Report
+                       </button>
+                       <button className="btn-primary" style={{marginTop:'12px', width:'100%', background: '#14b8a6'}} onClick={handleGenerateReport}>
+                         Generate Executive Report
+                       </button>
+                     </>
+                  )}
+               </div>
+             );
+
+          case 'pac_export':
+             return (
+               <div className="card-container border-green">
+                  <div style={{color:'#10b981', fontWeight:600, marginBottom:'8px'}}>Terraform Exported</div>
+                  <pre style={{background:'#1e293b', padding:'8px', borderRadius:'4px', fontSize:'10px', color:'#cbd5e1', overflowX:'auto'}}>
+{`resource "aws_wafv2_web_acl" "shadow_api_waf" {
+  name  = "shadow-api-protection"
+  scope = "REGIONAL"
+
+  rule {
+    name     = "mfa-circuit-breaker"
+    priority = 1
+    action { block {} }
+  }`}
+                  </pre>
+               </div>
+             );
+
+          case 'what_if_result':
+             return (
+               <div className="card-container" style={{borderColor: '#a855f7'}}>
+                  <div style={{display:'flex', alignItems:'center', gap:'8px', marginBottom:'8px'}}>
+                     <span style={{fontSize:'10px', background:'#a855f7', padding:'2px 6px', borderRadius:'4px', color:'white', fontWeight:'bold'}}>SIMULATION AGENT</span>
+                     <h4 style={{color:'#a855f7'}}>Sandbox Result</h4>
+                  </div>
+                  <p style={{fontSize:'12px', marginBottom:'8px'}}>If we move the Customer Root Database to a different, isolated VPC:</p>
+                  <ul style={{fontSize:'11px', paddingLeft:'20px', color:'#cbd5e1', listStyleType:'circle'}}>
+                     <li style={{marginBottom:'4px'}}>The PCS score of our Domain Admin path drops from 9.9 to <strong>3.2</strong>.</li>
+                     <li><span style={{color: '#facc15', fontWeight:'bold'}}>Warning:</span> It introduces an estimated 45ms latency for the Finance Application.</li>
+                  </ul>
+               </div>
+             );
+
+          case 'executive_report':
+             return (
+               <div className="card-container" style={{borderColor: '#14b8a6', background: 'rgba(20, 184, 166, 0.05)'}}>
+                  <h4 style={{color:'#14b8a6', marginBottom:'12px', borderBottom:'1px solid rgba(20,184,166,0.2)', paddingBottom:'8px'}}>EXECUTIVE SUMMARY</h4>
+                  <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', fontSize:'11px'}}>
+                     <div style={{color:'#94a3b8'}}>Paths Discovered:</div>
+                     <div style={{fontWeight:'bold', color:'white'}}>Critical Attack Paths</div>
+                     <div style={{color:'#94a3b8'}}>PCS Resolution:</div>
+                     <div style={{fontWeight:'bold', color:'#10b981'}}>Neutralized Safely</div>
+                     <div style={{color:'#94a3b8'}}>Remediation:</div>
+                     <div style={{fontWeight:'bold', color:'white'}}>Choke Points Secured</div>
+                     <div style={{color:'#94a3b8'}}>Time Elapsed:</div>
+                     <div style={{fontWeight:'bold', color:'white'}}>Autonomous / Sub-Minute</div>
+                  </div>
+                  <div style={{marginTop: '16px'}}>
+                     <button className="btn-primary" style={{width:'100%'}} onClick={handleStartPhase2}>
+                       Begin Phase 2: AI Agent Posture Validation
+                     </button>
+                     <button className="btn-primary" style={{marginTop:'8px', width:'100%', background: '#eab308'}} onClick={handleStartPhase3}>
+                       Begin Phase 3: Advanced Command Center
+                     </button>
+                     <button className="btn-outline" style={{marginTop:'8px', width:'100%', borderColor: '#64748b', color: '#cbd5e1'}} onClick={handleAgentReset}>
+                       ↻ Restart Agent Workflow
+                     </button>
+                  </div>
+               </div>
+             );
+
+          case 'phase1_report':
+             return (
+               <div className="card-container" style={{borderColor:'#14b8a6', background:'rgba(20,184,166,0.05)'}}>
+                  <h4 style={{color:'#14b8a6'}}>Agent Iris Report Package</h4>
+                  <div style={{display:'grid', gridTemplateColumns:'1fr', gap:'8px', marginTop:'10px', fontSize:'11px'}}>
+                    <div><strong>Headline:</strong> Critical Attack Path Severed via WAF &amp; MFA Circuit Breaker</div>
+                    <div><strong>Business impact:</strong> Protected $2.4M in daily transaction volume from credential theft and API BOLA abuse.</div>
+                    <div><strong>Technical summary:</strong> Validated lateral movement across UAT Dev to Shadow API. Deployed temporary WAF rules and enforced hardware MFA to sever the path at Node B.</div>
+                    <div><strong>Recommended action:</strong> Monitor access logs for Node B. Schedule a permanent architectural review of the Shadow API.</div>
+                    <div><strong>Rollback:</strong> Remove WAF rule &apos;mfa-circuit-breaker&apos; and disable MFA enforcement on Node B.</div>
+                  </div>
+               </div>
+             );
+
+          case 'phase2_review_prompt':
+             return (
+               <div className="card-container text-right" style={{textAlign: 'right'}}>
+                 <button className="btn-primary" onClick={handlePhase2Simulate} disabled={chatPhase !== 'phase2_review'}>
+                   Authorize Security Review Simulation
+                 </button>
+               </div>
+             );
+
+          case 'phase2_remediation_prompt':
+             return (
+               <div className="card-container">
+                  <div style={{display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px'}}>
+                      <span style={{fontSize:'10px', background:'#fb923c', padding:'2px 6px', borderRadius:'4px', color:'white', fontWeight:'bold'}}>REMEDIATION AGENT</span>
+                  </div>
+                  <p style={{fontSize:'12px', marginBottom:'8px'}}>Simulation validated. The AI Agent is vulnerable. I have automatically drafted the exact architectural fix required to secure the egress perimeter.</p>
+                  <p style={{fontSize:'12px', marginBottom:'12px'}}>Rather than creating a manual ticket, I have automatically compiled this fix into code and sent it as a Pull Request (PR) directly to the Finance Dev Team&apos;s native GitHub repository to completely eliminate friction. Do you authorize this commit?</p>
+                  <button className="btn-primary" style={{width:'100%'}} onClick={handlePhase2Mitigate} disabled={chatPhase !== 'phase2_remediation'}>
+                    Authorize Dev Handoff & Secure
+                  </button>
+               </div>
+             );
+
+          case 'phase2_revalidation_results':
+             return (
+               <div className="card-container">
+                  <h4 style={{color:'#10b981'}}>AI Supply Chain Secured</h4>
+                  <p style={{fontSize:'12px', marginTop:'12px'}}>⭐ PR successfully merged. Finance Dev Team notified organically. The PCS score neutralized completely.</p>
+                  {chatPhase === 'phase2_complete' && (
+                     <button className="btn-primary" style={{marginTop:'12px', width:'100%', background: '#14b8a6'}} onClick={handleGenerateReport}>
+                       Generate Executive Report
+                     </button>
+                  )}
+               </div>
+             );
+
+          case 'phase3_selection':
+             return (
+               <div className="card-container">
+                 <h4><span style={{color:'#facc15'}}>★</span> Multi-Path Prioritization</h4>
+                 <p style={{fontSize:'12px', marginTop:'8px'}}>
+                   Backend analysis ranked {phase3Analysis?.activePaths || 0} viable paths. Top path: <strong>{phase3Analysis?.topPath?.title || 'Calculating...'}</strong>.
+                 </p>
+                 <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', marginTop:'12px', fontSize:'11px'}}>
+                   <div style={{color:'#94a3b8'}}>Top PCS</div>
+                   <div style={{fontWeight:'bold', color:'#ef4444'}}>{phase3Analysis?.pcsScore?.toFixed(1) || '-'}</div>
+                   <div style={{color:'#94a3b8'}}>Choke Point</div>
+                   <div style={{fontWeight:'bold'}}>{phase3Analysis?.chokePoints?.[0]?.label || '-'}</div>
+                   <div style={{color:'#94a3b8'}}>Owners</div>
+                   <div style={{fontWeight:'bold'}}>{phase3Analysis?.topPath?.owners?.join(', ') || '-'}</div>
+                 </div>
+                 <button className="btn-primary" style={{marginTop:'12px', width:'100%'}} onClick={handlePhase3Simulate} disabled={chatPhase !== 'phase3_selection'}>
+                   Simulate Prioritized Path & Blast Radius
+                 </button>
+               </div>
+             );
+
+          case 'phase3_blast_radius':
+             return (
+               <div className="card-container" style={{borderColor: '#ef4444'}}>
+                  <div style={{display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px'}}>
+                     <span style={{fontSize:'10px', background:'#a855f7', padding:'2px 6px', borderRadius:'4px', color:'white', fontWeight:'bold'}}>SIMULATION AGENT</span>
+                  </div>
+                  <h4 style={{color:'#ef4444'}}>Lateral Movement & Blast Radius</h4>
+                  <p style={{fontSize:'12px', marginTop:'8px'}}>
+                    Simulation traversed successfully ({phase3Simulation?.selectedPath?.techniques?.join(' -> ') || 'techniques calculated by backend'}).
+                  </p>
+                  <p style={{fontSize:'12px', marginTop:'8px', fontWeight:'bold', color:'#fca5a5'}}>
+                    If exploited, the attacker reaches {phase3Simulation?.blastRadius?.length || 0} directly modeled blast-radius asset(s): {(phase3Simulation?.blastRadius || []).map((asset) => asset.label).join(', ') || 'none'}.
+                  </p>
+                  <div style={{marginTop:'12px', fontSize:'11px', color:'#cbd5e1'}}>
+                    <strong>Evidence:</strong> {phase3Simulation?.selectedPath?.evidence?.[0] || 'Evidence chain loading...'}
+                  </div>
+                  <div style={{marginTop:'12px'}}>
+                    <h5 style={{color:'#94a3b8', fontSize:'10px', marginBottom:'8px'}}>PCS EXPLANATION</h5>
+                    {(phase3Simulation?.selectedPath?.pcsBreakdown || []).map((item) => (
+                      <div key={item.label} style={{display:'grid', gridTemplateColumns:'1fr auto', gap:'8px', fontSize:'10px', borderBottom:'1px solid rgba(255,255,255,0.06)', padding:'5px 0'}}>
+                        <span>{item.label}</span>
+                        <strong style={{color:item.label === 'Final PCS' ? '#ef4444' : '#cbd5e1'}}>{item.value}</strong>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{marginTop:'12px'}}>
+                     <h5 style={{color:'#94a3b8', fontSize:'10px', marginBottom:'8px'}}>MULTI-REMEDIATION TRADE-OFFS</h5>
+                     {(phase3Simulation?.mitigationOptions || phase3Analysis?.mitigationOptions || []).map((option, index) => (
+                       <div key={option.id} className="mitigation-card mt-2" style={{cursor:'pointer', borderColor: index === 0 ? 'rgba(16,185,129,0.3)' : 'rgba(59,130,246,0.3)'}} onClick={() => chatPhase === 'phase3_remediation_options' && handlePhase3Mitigate(option)}>
+                         <div style={{fontWeight:600, color:index === 0 ? '#10b981' : '#93c5fd', fontSize:'11px'}}>Option {index + 1}: {option.label}</div>
+                         <div style={{fontSize:'10px', color:'#94a3b8', marginTop:'4px'}}>
+                           Closes {option.pathsClosed} path(s). PCS -{option.scoreReduction.toFixed(1)}. Deploy: {option.deployTime}. Downtime: {option.downtime}.
+                         </div>
+                       </div>
+                     ))}
+                  </div>
+               </div>
+             );
+
+          case 'phase3_bypass_prompt':
+             return (
+               <div className="card-container border-green">
+                  <p style={{fontSize:'12px'}}>
+                    Mitigation holds. Residual active paths: {phase3Remediation?.activePaths ?? '-'}. Residual PCS: {phase3Remediation?.pcsScore?.toFixed(1) ?? '-'}.
+                    Would you like me to simulate what happens if the attacker attempts a bypass?
+                  </p>
+                  <button className="btn-outline" style={{marginTop:'12px', width:'100%'}} onClick={handlePhase3PolicyPreview} disabled={!phase3Policy}>
+                    Show Policy Preview
+                  </button>
+                  <button className="btn-primary" style={{marginTop:'12px', width:'100%'}} onClick={handlePhase3Bypass} disabled={chatPhase !== 'phase3_bypass'}>
+                    Yes, simulate bypass
+                  </button>
+               </div>
+             );
+
+          case 'phase3_complete':
+             return (
+               <div className="card-container">
+                  <h4 style={{color:'#10b981'}}>No Viable Bypass Found</h4>
+                  <p style={{fontSize:'12px', marginTop:'8px'}}>Secondary traversal blocked. Remediation holds. Total environment PCS stabilized at {phase3Remediation?.pcsScore?.toFixed(1) ?? 'the backend-computed residual score'}.</p>
+                  {whatIfAnswer && <p style={{fontSize:'11px', color:'#94a3b8', marginTop:'8px'}}>Latest what-if: {whatIfAnswer}</p>}
+                  <button className="btn-outline" style={{marginTop:'12px', width:'100%'}} onClick={handlePhase3Report} disabled={!phase3Report}>
+                    Generate Agent Iris Report
+                  </button>
+                  {chatPhase === 'phase3_complete' && (
+                     <button className="btn-primary" style={{marginTop:'12px', width:'100%', background: '#14b8a6'}} onClick={handleGenerateReport}>
+                       Generate Executive Report
+                     </button>
+                  )}
+               </div>
+             );
+
+          case 'phase3_policy_preview':
+             return (
+               <div className="card-container" style={{borderColor:'#38bdf8'}}>
+                  <h4 style={{color:'#38bdf8'}}>Policy-as-Code Preview</h4>
+                  <p style={{fontSize:'11px', marginTop:'8px', color:'#cbd5e1'}}>Type: {phase3Policy?.type || '-'}</p>
+                  <pre style={{background:'#0f172a', padding:'10px', borderRadius:'6px', marginTop:'10px', fontSize:'10px', color:'#e2e8f0', overflowX:'auto'}}>
+                    {phase3Policy?.content || 'Policy preview unavailable.'}
+                  </pre>
+               </div>
+             );
+
+          case 'phase3_report':
+             return (
+               <div className="card-container" style={{borderColor:'#14b8a6', background:'rgba(20,184,166,0.05)'}}>
+                  <h4 style={{color:'#14b8a6'}}>Agent Iris Report Package</h4>
+                  <div style={{display:'grid', gridTemplateColumns:'1fr', gap:'8px', marginTop:'10px', fontSize:'11px'}}>
+                    <div><strong>Headline:</strong> {phase3Report?.headline || '-'}</div>
+                    <div><strong>Business impact:</strong> {phase3Report?.businessImpact || '-'}</div>
+                    <div><strong>Technical summary:</strong> {phase3Report?.technicalSummary || '-'}</div>
+                    <div><strong>Recommended action:</strong> {phase3Report?.recommendedAction || '-'}</div>
+                    <div><strong>Rollback:</strong> {phase3Report?.rollback || '-'}</div>
+                  </div>
+               </div>
+             );
+
+          default: return null;
+        }
+      };
+
+      return (
+        <div className="agent-chat-container">
+          <div className="chat-header">
+            <div className="agent-avatar">🤖</div>
+            <div style={{fontWeight:600, fontSize:'15px', color:'white'}}>Agent Iris</div>
+          </div>
+          
+          <div className="chat-messages">
+            {messages.map((msg, i) => (
+              <div key={i} className={`message-row ${msg.sender}`}>
+                {msg.sender === 'agent' && (
+                  <div style={{display:'flex', flexDirection:'column', gap:'4px', width: '100%'}}>
+                     {msg.identity && <div style={{fontSize:'9px', fontWeight:'bold', color: msg.color||'#3b82f6', marginLeft:'32px', textTransform:'uppercase', letterSpacing:'1px'}}>{msg.identity}</div>}
+                     <div style={{display:'flex', gap:'8px', alignItems:'flex-end'}}>
+                       <div className="mini-avatar" style={{background: msg.color||'#3b82f6'}}>🤖</div>
+                       <div className="message-content">{renderMessageContent(msg, i)}</div>
+                     </div>
+                  </div>
+                )}
+                {msg.sender === 'user' && (
+                   <>
+                     <div className="message-content">{renderMessageContent(msg, i)}</div>
+                     <div className="mini-avatar user">👤</div>
+                   </>
+                )}
+              </div>
+            ))}
+            {isTyping && (
+              <div className="message-row agent">
+                <div className="mini-avatar" style={{background: '#475569'}}>🤖</div>
+                <div className="typing-indicator">
+                  <span className="dot"></span><span className="dot"></span><span className="dot"></span>
+                </div>
+              </div>
+            )}
+            <div ref={endOfChatRef} style={{height:'10px'}} />
+          </div>
+
+          {chatPhase.startsWith('phase3') && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(15,23,42,0.95)', zIndex: 10 }}>
+               <div 
+                 style={{ padding: '8px 16px', fontSize: '11px', color: '#94a3b8', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                 onClick={() => setShowAudit(!showAudit)}
+               >
+                 <span style={{fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px'}}>Audit Trail &amp; Compliance Log</span>
+                 <span>{showAudit ? '▼' : '▲'}</span>
+               </div>
+               
+               {showAudit && (
+                 <div style={{ padding: '0 16px 16px 16px', maxHeight: '150px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {auditLogs.length === 0 ? <div style={{fontSize:'11px', color:'#64748b'}}>No actions logged yet.</div> : 
+                     auditLogs.map((log, i) => (
+                       <div key={i} style={{fontSize: '11px', color: '#cbd5e1', display: 'flex', gap: '12px', borderLeft: '2px solid #3b82f6', paddingLeft: '8px'}}>
+                         <span style={{color: '#64748b', minWidth: '60px'}}>{log.time}</span>
+                         <span>{log.text}</span>
+                       </div>
+                     ))
+                    }
+                 </div>
+               )}
+
+               {chatPhase === 'phase3_complete' && (
+                 <form onSubmit={handlePhase3NLQ} style={{ padding: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                    <input name="q" placeholder="Ask a hypothetical scenario..." style={{ width: '100%', padding: '12px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px', fontSize: '12px' }} autoComplete="off" />
+                 </form>
+               )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Render the App
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<AgentDaeChat />);
+  </script>
+</body>
+</html>
