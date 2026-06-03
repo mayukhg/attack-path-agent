@@ -102,3 +102,54 @@ export const advancedScenario = {
     },
   ],
 };
+
+export const baseScenario = {
+  id: 'critical-attack-path-discovery',
+  name: 'Critical Attack Path Discovery',
+  entryNodes: ['A'],
+  crownJewels: ['G'],
+  nodes: baseNodes,
+  edges: baseEdges,
+  mitigations: [
+    {
+      id: 'waf-rule',
+      label: 'Emergency WAF Rule',
+      targetNode: 'B',
+      blockedEdges: ['eA-B'],
+      deployTime: 'Seconds',
+      downtime: 'None',
+      approvalGate: 'Auto-approved for 24-hour emergency containment',
+      policyType: 'AWS WAF rule',
+      rollback: 'Remove temporary managed rule from WAF policy',
+      residualRisk: 'Medium',
+      effectiveness: 0.62,
+      summary: 'Fast temporary containment for the Shadow API ingress vector.',
+    }
+  ]
+};
+
+export const aiPostureScenario = {
+  id: 'ai-agent-posture',
+  name: 'AI Agent Posture Validation',
+  entryNodes: ['W1'],
+  crownJewels: ['W3'],
+  nodes: aiNodes,
+  edges: aiEdges,
+  mitigations: [
+    {
+      id: 'secure-ai-egress',
+      label: 'Authorize Dev Handoff & Secure',
+      targetNode: 'W2',
+      blockedEdges: ['eW1-W2', 'eW2-W3'],
+      deployTime: 'Minutes',
+      downtime: 'None',
+      approvalGate: 'Dev & App owner approval required',
+      policyType: 'AI security egress policy PR',
+      rollback: 'Revert security PR in github repo',
+      residualRisk: 'Very low',
+      effectiveness: 0.95,
+      summary: 'Secures external egress traffic and prompt injection paths.',
+    }
+  ]
+};
+

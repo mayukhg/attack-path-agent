@@ -93,9 +93,9 @@ h1, h2, h3 {
 
 /* Base layouts */
 .dashboard-container {
-  display: grid;
-  grid-template-columns: 350px 1fr 350px;
-  gap: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   padding: 24px;
   height: 100vh;
 }
@@ -356,9 +356,15 @@ h1, h2, h3 {
 .agent-chat-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  background: var(--bg-color);
-  border-left: 1px solid var(--border-color);
+  height: 90vh;
+  max-width: 700px;
+  width: 100%;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+  margin: 0 auto;
 }
 
 .chat-header {
@@ -454,14 +460,7 @@ h1, h2, h3 {
   border-radius: 8px;
 }
 
-/* Base layouts override for React Flow */
-.dashboard-container {
-  display: grid;
-  grid-template-columns: 1.2fr 2fr;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-}
+
 .react-flow__pane { background: var(--bg-color); }
 
 /* --- CXO Narrative Upgrades --- */
@@ -525,3 +524,25 @@ h1, h2, h3 {
   display: flex; gap: 12px; align-items: center;
   box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
 }
+
+/* Glowing Bullet Syncing */
+.capability-bullet {
+  transition: all 0.3s ease;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.capability-bullet.glow {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa !important;
+  text-shadow: 0 0 8px rgba(96, 165, 250, 0.6);
+  transform: translateX(4px);
+}
+
+.capability-bullet.completed {
+  color: #10b981 !important;
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+

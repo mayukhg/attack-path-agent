@@ -193,6 +193,26 @@ export const createExecutiveReport = (scenario = advancedScenario, mitigationId)
 export const generatePolicyPreview = (scenario = advancedScenario, mitigationId) => {
   const mitigation = scenario.mitigations.find((item) => item.id === mitigationId) || rankMitigations(scenario)[0];
 
+  if (mitigation.id === 'secure-ai-egress') {
+    return {
+      type: mitigation.policyType,
+      content: `apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: secure-ai-agent-egress
+  namespace: finance
+spec:
+  selector:
+    matchLabels:
+      app: finance-auto-billing-agent
+  action: DENY
+  rules:
+  - to:
+    - operation:
+        hosts: ["public-untrusted-api.net"]`,
+    };
+  }
+
   if (mitigation.id === 'segmentation-mfa') {
     return {
       type: mitigation.policyType,
@@ -234,7 +254,7 @@ conditionalAccess:
     content: `resource "aws_wafv2_web_acl" "shadow_api_containment" {
   name  = "shadow-api-emergency-containment"
   scope = "REGIONAL"
-
+ 
   rule {
     name     = "block-bola-pivot"
     priority = 1
