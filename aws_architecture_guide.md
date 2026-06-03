@@ -10,6 +10,28 @@ The diagram below details the structural layout of the SaaS platform across both
 
 ![AWS Multi-Tenant Scaling Architecture Diagram](aws_scaling_architecture.png)
 
+### Step-by-Step Diagram Flow Explanation
+
+1. **Step 1: Telemetry Generation at the Edge (Customer VPCs)**:
+   The security lifecycle begins inside the client environment (e.g., EKS clusters in VPC A or B). Local **Sidecar Observers** continuously monitor workload states. When a threat vector triggers (e.g., Case 1 port drift or Case 2 Prompt Injection), the sidecar generates a JSON-LD event.
+2. **Step 2: Secure WAN Routing (Transit Gateway / Route 53)**:
+   The sidecar routes the telemetry payload securely over the internet or private networks. **AWS Route 53** maps the request to the correct geographical SaaS endpoint. Traffic enters the SaaS ingress zone via a Transit Gateway or Internet Gateway.
+3. **Step 3: Edge Ingress Protection & Token Verification**:
+   The request lands in the Public Subnet (DMZ) of the SaaS VPC. **AWS WAF** filters out web exploits, while the **Application Load Balancer (ALB)** and **API Gateway** terminate the mutual TLS (mTLS) session, extracting the client certificate's Common Name (CN) to identify and authorize the `tenant_id`.
+4. **Step 4: Event Buffering (Amazon MSK)**:
+   The API Gateway streams the telemetry payload to **Amazon MSK (Kafka)** brokers in the Private Application Subnet. Telemetry events are partitioned strictly by `tenant_id` inside Kafka topics to guarantee message processing order.
+5. **Step 5: Event Ingestion & DB Writes (ECS Fargate)**:
+   Autoscaling **AWS ECS on Fargate** worker tasks consume messages from Kafka:
+   - They write the raw event into **Amazon RDS (PostgreSQL/TimescaleDB)** inside the Isolated Database Subnet to populate the compliance audit ledger.
+   - They update the customer's network topology model in the **Amazon Neptune Graph Database**.
+6. **Step 6: Async Path Risk Solving & UI WebSockets Broadcast**:
+   A dedicated worker triggers the attack path solver to traverse the Neptune graph. Once risk score deltas (PCS) are updated, the backend pushes the new graph layout to the **WebSocket Gateway (AWS API Gateway)**, which immediately updates active dashboard sessions in the user's browser.
+7. **Step 7: Zero-Trust Remediation Loop (AWS SQS & Operator)**:
+   If the admin approves a remediation (e.g., Case 3 priority fix):
+   - The SaaS control plane pushes a signed policy manifest to an **AWS SQS** queue.
+   - A pull-based **Kubernetes Operator** inside the customer's EKS cluster pulls the manifest, validates its signature, and applies the policy locally.
+   - The EKS sidecar observes the new secure state and sends a `mitigation_applied` event back to the SaaS control plane, turning the visual node green.
+
 ---
 
 ## 2. Deep Dive: AWS Constructs
