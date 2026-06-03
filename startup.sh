@@ -2,7 +2,7 @@
 set -eu
 
 echo "========================================================"
-echo "Starting DAE Attack Path Demo (Integrated Frontend + API Backend)"
+echo "Starting Attack Path Agent Demo (Integrated Frontend + API Backend)"
 echo "========================================================"
 echo
 echo "UI URL: http://localhost:3000"

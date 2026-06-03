@@ -2,7 +2,7 @@
 set -eu
 
 echo "========================================================"
-echo "Shutting down DAE Attack Path Demo..."
+echo "Shutting down Attack Path Agent Demo..."
 echo "========================================================"
 
 if command -v lsof >/dev/null 2>&1; then

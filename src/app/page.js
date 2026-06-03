@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import AgentDaeChat from '../components/AgentDaeChat';
+import AgentAttackPathAgentChat from '../components/AgentAttackPathAgentChat';
 
 export default function Dashboard() {
   const [eventLog, setEventLog] = useState([]);
@@ -70,7 +70,7 @@ export default function Dashboard() {
         display: 'flex',
         flexDirection: 'column'
       }}>
-        <AgentDaeChat 
+        <AgentAttackPathAgentChat 
           onTriggerTelemetry={handleTriggerTelemetry}
           eventLog={eventLog}
         />

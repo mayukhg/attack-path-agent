@@ -1,6 +1,6 @@
 @echo off
 echo ========================================================
-echo Shutting down DAE Attack Path Demo...
+echo Shutting down Attack Path Agent Demo...
 echo ========================================================
 echo.
 

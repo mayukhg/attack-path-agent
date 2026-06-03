@@ -351,7 +351,7 @@ h1, h2, h3 {
 ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
 
-/* --- Agent DAE Chat UI --- */
+/* --- Agent Attack Path Agent Chat UI --- */
 
 .agent-chat-container {
   display: flex;

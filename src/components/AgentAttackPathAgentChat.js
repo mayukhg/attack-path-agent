@@ -18,7 +18,7 @@ const callAttackPathApi = async (options = {}) => {
   return response.json();
 };
 
-export default function AgentDaeChat({ onTriggerTelemetry, eventLog }) {
+export default function AgentAttackPathAgentChat({ onTriggerTelemetry, eventLog }) {
   const [messages, setMessages] = useState([]);
   const [chatPhase, setChatPhase] = useState('intro');
   const [selectedPath, setSelectedPath] = useState('');

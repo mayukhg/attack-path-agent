@@ -16,7 +16,7 @@ Project Sentinel transitions the "Antigravity" security posture dashboard from a
 ## Directory Structure
 
 ```text
-dae-attack-path-demo/
+attack-path-agent/
 ├── src/
 │   ├── app/
 │   │   ├── api/
@@ -27,7 +27,7 @@ dae-attack-path-demo/
 │   │   ├── globals.css           # Dashboard layout styling and glows
 │   │   ├── page.js               # Reactive split-screen container & SSE listener
 │   ├── components/
-│   │   ├── AgentDaeChat.js       # Agent Iris welcome orchestrator
+│   │   ├── AgentAttackPathAgentChat.js # Agent Iris welcome orchestrator
 │   │   ├── SentinelConsole.js    # Visual graph & audit replay timeline
 │   │   └── CustomNodes.js        # React Flow custom security node styling
 │   ├── lib/
