@@ -24,6 +24,8 @@ export default function SentinelConsole({
 }) {
   const [activeTab, setActiveTab] = useState('telemetry');
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [selectedEdge, setSelectedEdge] = useState(null);
   const logContainerRef = useRef(null);
 
   // Auto-scroll logs to bottom when a new event arrives (unless in replay mode)
@@ -79,6 +81,18 @@ export default function SentinelConsole({
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          onNodeClick={(event, node) => {
+            setSelectedNode(node);
+            setSelectedEdge(null);
+          }}
+          onEdgeClick={(event, edge) => {
+            setSelectedEdge(edge);
+            setSelectedNode(null);
+          }}
+          onPaneClick={() => {
+            setSelectedNode(null);
+            setSelectedEdge(null);
+          }}
           nodeTypes={nodeTypes}
           fitView
           fitViewOptions={{ padding: 0.2 }}
@@ -86,6 +100,127 @@ export default function SentinelConsole({
           <Background color="rgba(255,255,255,0.05)" gap={16} size={1} />
           <Controls style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} />
         </ReactFlow>
+
+        {/* Active Validation Detail Inspector Overlay */}
+        {(selectedNode || selectedEdge) && (
+          <div style={{
+            position: 'absolute',
+            top: '12px',
+            right: '12px',
+            width: '280px',
+            background: 'rgba(15, 23, 42, 0.95)',
+            padding: '16px',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            fontSize: '11px',
+            color: '#cbd5e1',
+            zIndex: 100,
+            boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '6px' }}>
+              <span style={{ fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                🛡️ Validation Inspector
+              </span>
+              <button 
+                onClick={() => { setSelectedNode(null); setSelectedEdge(null); }}
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', padding: '0 4px' }}
+              >
+                ×
+              </button>
+            </div>
+
+            {(() => {
+              const target = selectedNode || selectedEdge;
+              const data = target.data || {};
+              const validationStatus = data.validationStatus || (selectedNode && data.status === 'compromised' ? 'PROVEN_ATTACK_VECTOR' : selectedNode && data.status === 'secured' ? 'BLOCKED_PATH_JUNCTION' : 'UNVERIFIED');
+              
+              if (validationStatus === 'PROVEN_ATTACK_VECTOR') {
+                const evidence = data.evidence || {};
+                let extractedText = "RCE execution verified: uid=0(root) gid=0(root)";
+                if (evidence.extracted_output) {
+                  extractedText = evidence.extracted_output;
+                } else if (evidence.payload?.evidence?.extracted_output) {
+                  extractedText = evidence.payload.evidence.extracted_output;
+                } else if (evidence.technical_details?.command_output) {
+                  extractedText = evidence.technical_details.command_output;
+                } else if (evidence.computed_hash) {
+                  extractedText = `Cryptographic Proof (SHA-256 Match):\n${evidence.computed_hash}`;
+                }
+                
+                return (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', background: '#FF0033', borderRadius: '50%', boxShadow: '0 0 8px #FF0033' }}></span>
+                      <strong style={{ color: '#FF3366', fontSize: '10px' }}>PROVEN ATTACK VECTOR</strong>
+                    </div>
+                    <div style={{ background: 'rgba(255, 0, 51, 0.15)', border: '1px solid rgba(255, 0, 51, 0.3)', padding: '6px 8px', borderRadius: '4px', color: '#fca5a5', fontWeight: 'bold', fontSize: '9px', textAlign: 'center' }}>
+                      Exploit Validated: Callback Confirmed
+                    </div>
+                    <div style={{ marginTop: '4px' }}>
+                      <span style={{ color: '#94a3b8' }}>Target Context:</span> <strong style={{ color: 'white' }}>{selectedNode ? data.label : `${target.source} ➔ ${target.target}`}</strong>
+                    </div>
+                    {data.techniqueId && (
+                      <div>
+                        <span style={{ color: '#94a3b8' }}>MITRE Technique:</span> <code style={{ background: '#1e293b', padding: '1px 4px', borderRadius: '2px', fontFamily: 'monospace' }}>{data.techniqueId}</code>
+                      </div>
+                    )}
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px', marginTop: '4px' }}>
+                      <strong style={{ color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Auditable Proof Evidence:</strong>
+                      <div style={{ background: '#090d16', padding: '8px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '9px', color: '#38bdf8', overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '80px', overflowY: 'auto' }}>
+                        {extractedText}
+                      </div>
+                    </div>
+                  </>
+                );
+              } else if (validationStatus === 'BLOCKED_PATH_JUNCTION') {
+                return (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', background: '#00CC66', borderRadius: '50%', boxShadow: '0 0 8px #00CC66' }}></span>
+                      <strong style={{ color: '#00FF88', fontSize: '10px' }}>BLOCKED PATH JUNCTION</strong>
+                    </div>
+                    <div style={{ background: 'rgba(0, 204, 102, 0.15)', border: '1px solid rgba(0, 204, 102, 0.3)', padding: '6px 8px', borderRadius: '4px', color: '#a7f3d0', fontWeight: 'bold', fontSize: '9px', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                      🔒 Exploit Mitigated
+                    </div>
+                    <div style={{ marginTop: '4px' }}>
+                      <span style={{ color: '#94a3b8' }}>Target Context:</span> <strong style={{ color: 'white' }}>{selectedNode ? data.label : `${target.source} ➔ ${target.target}`}</strong>
+                    </div>
+                    <p style={{ color: '#cbd5e1', fontStyle: 'italic', marginTop: '6px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px', lineHeight: '1.4' }}>
+                      While a vulnerability theoretically exists on paper, active validation proved the node cannot be exploited or traversed due to active environmental defenses.
+                    </p>
+                  </>
+                );
+              } else {
+                return (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', background: '#A0A0A0', borderRadius: '50%' }}></span>
+                      <strong style={{ color: '#cbd5e1', fontSize: '10px' }}>UNVERIFIED LINK (PENDING)</strong>
+                    </div>
+                    <div style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '6px 8px', borderRadius: '4px', color: '#94a3b8', fontWeight: 'bold', fontSize: '9px', textAlign: 'center' }}>
+                      Pending / Inconclusive
+                    </div>
+                    <div style={{ marginTop: '4px' }}>
+                      <span style={{ color: '#94a3b8' }}>Target Context:</span> <strong style={{ color: 'white' }}>{selectedNode ? data.label : `${target.source} ➔ ${target.target}`}</strong>
+                    </div>
+                    {data.confidence && (
+                      <div style={{ marginTop: '4px' }}>
+                        <span style={{ color: '#94a3b8' }}>Theoretical CVSS:</span> <span style={{ color: '#fb923c', fontWeight: 'bold' }}>{((data.confidence * 4) + 6).toFixed(1)} / 10</span>
+                      </div>
+                    )}
+                    <p style={{ color: '#94a3b8', fontStyle: 'italic', marginTop: '6px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px', lineHeight: '1.4' }}>
+                      ⚠️ An absence of explicit proof does not mean an absence of risk, preserving baseline visibility into the unresolved vulnerability.
+                    </p>
+                  </>
+                );
+              }
+            })()}
+          </div>
+        )}
         
         {/* Graph Legend Overlay */}
         <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(15, 23, 42, 0.85)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '6px' }}>

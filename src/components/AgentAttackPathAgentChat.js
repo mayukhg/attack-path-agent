@@ -18,7 +18,7 @@ const callAttackPathApi = async (options = {}) => {
   return response.json();
 };
 
-export default function AgentAttackPathAgentChat({ onTriggerTelemetry, eventLog }) {
+export default function AgentAttackPathAgentChat({ onTriggerTelemetry, eventLog, onScenarioChange }) {
   const [messages, setMessages] = useState([]);
   const [chatPhase, setChatPhase] = useState('intro');
   const [selectedPath, setSelectedPath] = useState('');
@@ -64,6 +64,7 @@ export default function AgentAttackPathAgentChat({ onTriggerTelemetry, eventLog 
 
   // Use Case 1: Continuous validation (drift)
   const handleStartScoping = async () => {
+    if (onScenarioChange) onScenarioChange('critical-attack-path-discovery');
     setChatPhase('discovery');
     setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Begin continuous validation. Trigger workload config drift." }]);
     
@@ -188,6 +189,7 @@ export default function AgentAttackPathAgentChat({ onTriggerTelemetry, eventLog 
 
   // Use Case 2: AI Agent Posture Validation
   const handleStartPhase2 = async () => {
+    if (onScenarioChange) onScenarioChange('ai-agent-posture');
     setChatPhase('phase2_discovery');
     setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Begin Case 2: AI Posture & Supply Chain Validation" }]);
     
@@ -279,6 +281,7 @@ export default function AgentAttackPathAgentChat({ onTriggerTelemetry, eventLog 
 
   // Use Case 3: Prioritized Autonomous Remediation
   const handleStartPhase3 = async () => {
+    if (onScenarioChange) onScenarioChange('advanced-command-center');
     setChatPhase('phase3_discovery');
     setMessages(prev => [...prev, { sender: 'user', type: 'text', content: "Begin Case 3: Prioritized Mitigation & Auditing" }]);
     
@@ -419,6 +422,7 @@ export default function AgentAttackPathAgentChat({ onTriggerTelemetry, eventLog 
   };
 
   const handleAgentReset = () => {
+    if (onScenarioChange) onScenarioChange('advanced-command-center');
     initRef.current = false;
     setMessages([]);
     setSelectedPath('');
@@ -455,6 +459,14 @@ export default function AgentAttackPathAgentChat({ onTriggerTelemetry, eventLog 
                     {completedPhases.phase3 ? '✔ ' : '○ '}Case 3: Automated multi-remediation prioritization
                  </li>
               </ul>
+              
+              <div style={{marginBottom: '16px', fontSize: '11px', color: '#cbd5e1', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '10px', marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '4px'}}>
+                 <strong style={{color: '#94a3b8', fontSize: '11px', display: 'block', marginBottom: '2px'}}>🛡️ Active Validation Engine Enabled:</strong>
+                 <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}><span style={{color: '#FF0033'}}>🔴</span> <strong>Proven Vectors</strong> (Exploit confirmed via Webhook proofs)</div>
+                 <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}><span style={{color: '#00CC66'}}>🟢</span> <strong>Blocked Junctions</strong> (Environmental mitigation confirmed)</div>
+                 <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}><span style={{color: '#A0A0A0'}}>⚪</span> <strong>Unverified Paths</strong> (Theoretical CVSS risk baselines)</div>
+              </div>
+
               <p style={{marginBottom: '16px', fontSize: '12px', fontWeight: 'bold', color: '#facc15'}}>
                  Select a scenario to trigger telemetry:
               </p>
@@ -519,18 +531,33 @@ export default function AgentAttackPathAgentChat({ onTriggerTelemetry, eventLog 
 
       case 'scanning_results':
          return (
-           <div className="card-container">
-              <div style={{display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px'}}>
-                 <span style={{fontSize:'10px', background:'#a855f7', padding:'2px 6px', borderRadius:'4px', color:'white', fontWeight:'bold'}}>SIMULATION DAEMON</span>
-                 <h4>Lateral Movement Traversed</h4>
-              </div>
-              <p style={{fontSize:'12px', marginBottom:'12px'}}>
-                Simulation verified. Remote execution achieved. Port 8080 allows BOLA pivot. Environment PCS rose to 9.2.
-              </p>
-              <button className="btn-outline" style={{width:'100%'}} onClick={handleViewRemediation} disabled={chatPhase !== 'remediation_options'}>
-                View Remediation Options
-              </button>
-           </div>
+            <div className="card-container">
+               <div style={{display:'flex', alignItems:'center', gap:'8px', marginBottom:'12px'}}>
+                  <span style={{fontSize:'10px', background:'#a855f7', padding:'2px 6px', borderRadius:'4px', color:'white', fontWeight:'bold'}}>SIMULATION DAEMON</span>
+                  <h4>Lateral Movement Traversed</h4>
+               </div>
+               
+               <div style={{ background: '#090d16', padding: '10px', borderRadius: '6px', border: '1px solid rgba(255, 0, 51, 0.2)', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                    <span style={{ display: 'inline-block', width: '8px', height: '8px', background: '#FF0033', borderRadius: '50%', boxShadow: '0 0 8px #FF0033' }}></span>
+                    <strong style={{ color: '#FF3366', fontSize: '10px' }}>Proven Attack Vector: Exploit Validated</strong>
+                  </div>
+                  <div style={{ fontSize: '9px', color: '#94a3b8', fontStyle: 'italic', marginBottom: '4px' }}>
+                     Validation Status: Callback Confirmed (CVE-2023-50164)
+                  </div>
+                  <strong style={{ color: '#cbd5e1', fontSize: '9px', display: 'block', marginBottom: '4px' }}>Auditable Proof Evidence:</strong>
+                  <div style={{ fontSize: '9px', color: '#38bdf8', fontFamily: 'monospace', background: 'rgba(0,0,0,0.5)', padding: '6px', borderRadius: '4px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                     uid=0(root) gid=0(root) groups=0(root) context=system_u:system_r:container_t:s0:c12,c34
+                  </div>
+               </div>
+
+               <p style={{fontSize:'12px', marginBottom:'12px'}}>
+                 Active validation complete. Port 8080 allows BOLA pivot. Environment PCS rose to 9.2.
+               </p>
+               <button className="btn-outline" style={{width:'100%'}} onClick={handleViewRemediation} disabled={chatPhase !== 'remediation_options'}>
+                 View Remediation Options
+               </button>
+            </div>
          );
 
       case 'mitigation_options':
@@ -630,23 +657,54 @@ export default function AgentAttackPathAgentChat({ onTriggerTelemetry, eventLog 
 
       case 'phase3_blast_radius':
          return (
-           <div className="card-container" style={{borderColor: '#ef4444'}}>
-              <h4 style={{color:'#ef4444'}}>Exploit Traversal &amp; Remediation Options</h4>
-              <p style={{fontSize:'12px', marginTop:'8px'}}>
-                Hypothetical exploit path validated. Attacker reaches Crown Jewel: AD Core via VPN Gateway.
-              </p>
-              <div style={{marginTop:'12px'}}>
-                 <h5 style={{color:'#94a3b8', fontSize:'10px', marginBottom:'8px'}}>PRIORITIZED REMEDIATIONS</h5>
-                 {(phase3Simulation?.mitigationOptions || []).map((option, index) => (
-                   <div key={option.id} className="mitigation-card mt-2" style={{cursor:'pointer', borderColor: index === 0 ? 'rgba(16,185,129,0.3)' : 'rgba(59,130,246,0.3)'}} onClick={() => chatPhase === 'phase3_remediation_options' && handlePhase3Mitigate(option)}>
-                     <div style={{fontWeight:600, color:index === 0 ? '#10b981' : '#93c5fd', fontSize:'11px'}}>Option {index + 1}: {option.label}</div>
-                     <div style={{fontSize:'10px', color:'#cbd5e1', marginTop:'4px'}}>
-                       Closes {option.pathsClosed} path(s). PCS -{option.scoreReduction}. Approval: {option.approvalGate}.
+            <div className="card-container" style={{borderColor: '#ef4444'}}>
+               <h4 style={{color:'#ef4444'}}>Exploit Traversal &amp; Remediation Options</h4>
+               
+               <div style={{ marginTop: '10px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <h5 style={{ color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>🛡️ Active Validation Results</h5>
+                  <div style={{ background: '#090d16', padding: '10px', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.05)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                     <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ color: '#FF0033' }}>🔴</span>
+                          <strong style={{ color: '#FF3366', fontSize: '10px' }}>Node B (Shadow API) - Proven Attack Vector</strong>
+                        </div>
+                        <div style={{ fontSize: '9px', color: '#cbd5e1', fontStyle: 'italic', marginTop: '2px' }}>Exploit Validated: Callback Confirmed (CVE-2023-50164)</div>
+                        <div style={{ fontSize: '9px', color: '#38bdf8', fontFamily: 'monospace', background: 'rgba(0,0,0,0.5)', padding: '6px', borderRadius: '4px', marginTop: '4px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                          uid=0(root) gid=0(root) groups=0(root) context=system_u:system_r:container_t:s0:c12,c34
+                        </div>
                      </div>
-                   </div>
-                 ))}
-              </div>
-           </div>
+                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ color: '#00CC66' }}>🟢</span>
+                          <strong style={{ color: '#00FF88', fontSize: '10px' }}>Node K (VPN Gateway) - Blocked Path Junction</strong>
+                        </div>
+                        <div style={{ fontSize: '9px', color: '#cbd5e1', fontStyle: 'italic', marginTop: '2px' }}>🔒 Exploit Mitigated. Traversal neutralized by active environmental controls.</div>
+                     </div>
+                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ color: '#A0A0A0' }}>⚪</span>
+                          <strong style={{ color: '#cbd5e1', fontSize: '10px' }}>Node F (Identity Provider) - Unverified Link</strong>
+                        </div>
+                        <div style={{ fontSize: '9px', color: '#94a3b8', fontStyle: 'italic', marginTop: '2px' }}>⚠️ Pending / Inconclusive. Absence of proof does not mean absence of risk. CVSS 8.5 baseline preserved.</div>
+                     </div>
+                  </div>
+               </div>
+
+               <p style={{fontSize:'12px', marginTop:'8px'}}>
+                 Hypothetical exploit path validated. Attacker reaches Crown Jewel: AD Core via VPN Gateway.
+               </p>
+               <div style={{marginTop:'12px'}}>
+                  <h5 style={{color:'#94a3b8', fontSize:'10px', marginBottom:'8px'}}>PRIORITIZED REMEDIATIONS</h5>
+                  {(phase3Simulation?.mitigationOptions || []).map((option, index) => (
+                    <div key={option.id} className="mitigation-card mt-2" style={{cursor:'pointer', borderColor: index === 0 ? 'rgba(16,185,129,0.3)' : 'rgba(59,130,246,0.3)'}} onClick={() => chatPhase === 'phase3_remediation_options' && handlePhase3Mitigate(option)}>
+                      <div style={{fontWeight:600, color:index === 0 ? '#10b981' : '#93c5fd', fontSize:'11px'}}>Option {index + 1}: {option.label}</div>
+                      <div style={{fontSize:'10px', color:'#cbd5e1', marginTop:'4px'}}>
+                        Closes {option.pathsClosed} path(s). PCS -{option.scoreReduction}. Approval: {option.approvalGate}.
+                      </div>
+                    </div>
+                  ))}
+               </div>
+            </div>
          );
 
       case 'phase3_bypass_prompt':
