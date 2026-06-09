@@ -1,10 +1,57 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { advancedScenario } from '../data/attackScenarios';
 
 const mockPaths = [
   { id: 'Path 1: UAT Dev -> Shadow API', nexus: 'API BOLA Abuse', nodes: 5, score: 9.6 },
   { id: 'Path 2: DMZ -> Kubelet', nexus: 'Container Escape', nodes: 3, score: 10.0 },
   { id: 'Path 3: Phishing -> VPN', nexus: 'Credential Theft', nodes: 4, score: 10.0 }
 ];
+
+const ValidationProgressCard = ({ targets, pathId, isRevalidation }) => {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setElapsed(s => s + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const ss = String(elapsed % 60).padStart(2, '0');
+  return (
+    <div style={{ width: '100%', background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: '10px', padding: '14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '13px', height: '13px', border: '2px solid rgba(59,130,246,0.2)', borderTop: '2px solid #3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+          <span style={{ fontSize: '11px', fontWeight: 700, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            {isRevalidation ? 'Re-Validating After Mitigation' : 'Active Validation Running'}
+          </span>
+        </div>
+        <span style={{ fontSize: '10px', color: '#64748b', fontFamily: 'monospace' }}>{mm}:{ss} elapsed</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+        {targets.map((t, idx) => {
+          const node = advancedScenario.nodes.find(n => n.id === t.node_id);
+          return (
+            <div key={t.node_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px', borderRadius: '7px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3b82f6', display: 'inline-block', boxShadow: '0 0 5px #3b82f6', animation: 'pulse 1s infinite' }} />
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#e2e8f0' }}>Node {t.node_id} — {node?.data?.label || t.node_id}</div>
+                  <div style={{ fontSize: '9px', fontFamily: 'monospace', color: '#64748b' }}>{t.cve_id} · {t.ip_address}:{t.ingress_port}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '3px' }}>
+                {[0,1,2].map(d => <span key={d} style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#3b82f6', display: 'inline-block', animation: `wave 0.8s ease ${d * 0.15}s infinite` }} />)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: '10px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3b82f6', display: 'inline-block', animation: 'pulse 1.2s infinite' }} />
+        Testing {targets.length} node(s) on path {pathId} · awaiting TruConfirm callback
+      </div>
+    </div>
+  );
+};
 
 const TypingIndicator = () => (
   <div className="typing-indicator" style={{ display: 'flex', gap: '4px', padding: '12px 16px', background: 'rgba(30, 41, 59, 0.6)', borderRadius: '12px', width: 'fit-content' }}>
@@ -39,6 +86,9 @@ export default function AgentDaeChat({ onAction, setSharedState }) {
   const [phase3Policy, setPhase3Policy] = useState(null);
   const [phase3Report, setPhase3Report] = useState(null);
   const [whatIfAnswer, setWhatIfAnswer] = useState('');
+  // TruConfirm validation state
+  const [validationTargets, setValidationTargets] = useState([]);
+  const [validationPathId, setValidationPathId] = useState(null);
   const endOfChatRef = useRef(null);
   const initRef = useRef(false);
 
@@ -60,6 +110,50 @@ export default function AgentDaeChat({ onAction, setSharedState }) {
     }
     endOfChatRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatPhase, messages.length, pushMessage]);
+
+  // SSE subscription: listen for TruConfirm callback results
+  useEffect(() => {
+    if (!validationPathId) return;
+    if (chatPhase !== 'phase3_validating' && chatPhase !== 'phase3_revalidating') return;
+
+    const isRevalidation = chatPhase === 'phase3_revalidating';
+    const es = new EventSource(`/api/validation-events?path_id=${encodeURIComponent(validationPathId)}`);
+
+    es.onmessage = (e) => {
+      es.close();
+      try {
+        const payload = JSON.parse(e.data);
+        if (payload.error) {
+          setMessages(prev => [...prev, { sender: 'agent', identity: 'Agent Iris', color: '#3b82f6', type: 'text', content: 'TruConfirm validation timed out. Proceeding with theoretical risk posture.' }]);
+          setChatPhase(isRevalidation ? 'phase3_bypass' : 'phase3_remediation_options');
+          return;
+        }
+        setAuditLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), text: `TruConfirm: Validation callback received for ${payload.path_id} — ${payload.results.length} node(s) assessed in ${payload.execution_duration_ms}ms` }]);
+        setMessages(prev => [...prev, {
+          sender: 'agent',
+          identity: isRevalidation ? 'Agent Iris · TruConfirm Re-Validation' : 'Agent Iris · TruConfirm Results',
+          color: isRevalidation ? '#10b981' : '#ef4444',
+          type: 'validation_results',
+          data: { ...payload, isRevalidation },
+        }]);
+        if (isRevalidation) {
+          setChatPhase('phase3_bypass');
+        } else {
+          setChatPhase('phase3_remediation_options');
+        }
+      } catch (err) {
+        console.error('Failed to parse validation event:', err);
+        setChatPhase(isRevalidation ? 'phase3_bypass' : 'phase3_remediation_options');
+      }
+    };
+
+    es.onerror = () => {
+      es.close();
+      setChatPhase(isRevalidation ? 'phase3_bypass' : 'phase3_remediation_options');
+    };
+
+    return () => es.close();
+  }, [validationPathId, chatPhase]);
 
   const handleStartScoping = () => {
     setChatPhase('discovery');
@@ -324,14 +418,42 @@ export default function AgentDaeChat({ onAction, setSharedState }) {
          pushMessage({ sender: 'agent', identity: 'Simulation Agent', color: '#a855f7', type: 'text', content: `Traversing ${result.selectedPath.id} with ${result.selectedPath.techniques.join(', ')} and confidence scoring...` }, 500);
       }, 500);
 
-      setTimeout(() => {
+      setTimeout(async () => {
          onAction('simulate_blast_radius', {
            blastNodeIds: result.blastRadius.map((asset) => asset.id),
          });
          setMessages(prev => [...prev, { sender: 'agent', type: 'phase3_blast_radius' }]);
          setAuditLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), text: `Simulation Agent: PCS ${result.selectedPath.pcs.toFixed(1)}. ${result.blastRadius.length} blast-radius assets exposed.` }]);
-         setChatPhase('phase3_remediation_options');
          setSharedState({ isSimulating: false, pcsScore: result.selectedPath.pcs });
+
+         // Delegate to TruConfirm active validation
+         const targets = result.validationTargets || [];
+         if (targets.length > 0) {
+           const pathId = result.selectedPath.id;
+           setValidationTargets(targets);
+           setValidationPathId(pathId);
+           setChatPhase('phase3_validating');
+           setMessages(prev => [...prev, {
+             sender: 'agent',
+             identity: 'Agent Iris · TruConfirm',
+             color: '#3b82f6',
+             type: 'validation_in_progress',
+             data: { targets, pathId },
+           }]);
+           setAuditLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), text: `Agent Iris: Delegated ${targets.length} node(s) to TruConfirm for empirical validation. Path: ${pathId}` }]);
+           try {
+             await fetch('/api/validation-delegate', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ path_id: pathId, tenant_id: 'default', targets, callback_url: `${window.location.origin}/api/validation-callback` }),
+             });
+           } catch (err) {
+             console.error('Validation delegate failed:', err);
+             setChatPhase('phase3_remediation_options');
+           }
+         } else {
+           setChatPhase('phase3_remediation_options');
+         }
       }, 5500);
     } catch (error) {
       setSharedState({ isSimulating: false });
@@ -367,10 +489,37 @@ export default function AgentDaeChat({ onAction, setSharedState }) {
          }); 
       }, 3000);
 
-      setTimeout(() => {
-         setMessages(prev => [...prev, { sender: 'agent', type: 'phase3_bypass_prompt' }]);
-         setChatPhase('phase3_bypass');
+      setTimeout(async () => {
          setSharedState({ pcsScore: result.pcsScore, activePaths: result.activePaths });
+
+         // Re-validate after mitigation if we have targets
+         if (validationTargets.length > 0) {
+           const revalPathId = `${result.mitigation?.id || mitigationId}-revalidation`;
+           setValidationPathId(revalPathId);
+           setChatPhase('phase3_revalidating');
+           setMessages(prev => [...prev, {
+             sender: 'agent',
+             identity: 'Agent Iris · TruConfirm',
+             color: '#3b82f6',
+             type: 'validation_in_progress',
+             data: { targets: validationTargets, pathId: revalPathId, isRevalidation: true },
+           }]);
+           setAuditLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), text: `Agent Iris: Re-delegating ${validationTargets.length} node(s) to TruConfirm to confirm EXPLOIT_MITIGATED state.` }]);
+           try {
+             await fetch('/api/validation-delegate', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ path_id: revalPathId, tenant_id: 'default', targets: validationTargets, callback_url: `${window.location.origin}/api/validation-callback` }),
+             });
+           } catch (err) {
+             console.error('Re-validation delegate failed:', err);
+             setMessages(prev => [...prev, { sender: 'agent', type: 'phase3_bypass_prompt' }]);
+             setChatPhase('phase3_bypass');
+           }
+         } else {
+           setMessages(prev => [...prev, { sender: 'agent', type: 'phase3_bypass_prompt' }]);
+           setChatPhase('phase3_bypass');
+         }
       }, 6000);
     } catch (error) {
       setMessages(prev => [...prev, { sender: 'agent', type: 'text', content: `Mitigation failed: ${error.message}` }]);
@@ -789,6 +938,109 @@ export default function AgentDaeChat({ onAction, setSharedState }) {
               </div>
            </div>
          );
+
+      // ── TruConfirm: Validation In Progress ──
+      case 'validation_in_progress': {
+        const { targets: vTargets = [], pathId: vPathId, isRevalidation: vIsReval } = msg.data || {};
+        return <ValidationProgressCard targets={vTargets} pathId={vPathId} isRevalidation={vIsReval} />;
+      }
+
+      // ── TruConfirm: Validation Results ──
+      case 'validation_results': {
+        const { results: vResults = [], execution_duration_ms, isRevalidation: rIsReval } = msg.data || {};
+        const allValidated = vResults.every(r => r.status === 'EXPLOIT_VALIDATED');
+        const allMitigated = vResults.every(r => r.status === 'EXPLOIT_MITIGATED');
+        const borderCol = allMitigated ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)';
+        const bgCol = allMitigated ? 'rgba(16,185,129,0.07)' : 'rgba(239,68,68,0.07)';
+        const headCol = allMitigated ? '#10b981' : '#ef4444';
+        const dotStyle = { width: '6px', height: '6px', borderRadius: '50%', background: headCol, boxShadow: `0 0 5px ${headCol}`, display: 'inline-block', flexShrink: 0 };
+        const headline = allMitigated
+          ? `Mitigation Confirmed — ${vResults.length} / ${vResults.length} Nodes Blocked`
+          : allValidated
+          ? `Exploit Validated — ${vResults.length} / ${vResults.length} Nodes Confirmed`
+          : 'Validation Inconclusive — Mixed Results';
+
+        return (
+          <div style={{ width: '100%', background: bgCol, border: `1px solid ${borderCol}`, borderRadius: '10px', padding: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={dotStyle} />
+                <strong style={{ fontSize: '11px', fontWeight: 700, color: headCol, textTransform: 'uppercase', letterSpacing: '0.4px' }}>{headline}</strong>
+              </div>
+              <span style={{ fontSize: '9px', color: '#64748b', fontFamily: 'monospace' }}>{execution_duration_ms ? `${execution_duration_ms.toLocaleString()}ms` : ''}</span>
+            </div>
+            {vResults.map(r => {
+              const node = advancedScenario.nodes.find(n => n.id === r.node_id);
+              const isProven = r.status === 'EXPLOIT_VALIDATED';
+              const isMitigated = r.status === 'EXPLOIT_MITIGATED';
+              const isInconclusive = r.status === 'INCONCLUSIVE';
+              const badgeBg = isProven ? 'rgba(239,68,68,0.15)' : isMitigated ? 'rgba(16,185,129,0.15)' : 'rgba(100,116,139,0.15)';
+              const badgeColor = isProven ? '#fca5a5' : isMitigated ? '#6ee7b7' : '#94a3b8';
+              const badgeBorder = isProven ? 'rgba(239,68,68,0.3)' : isMitigated ? 'rgba(16,185,129,0.3)' : 'rgba(100,116,139,0.3)';
+              const badgeLabel = isProven ? 'Exploit Validated' : isMitigated ? 'Exploit Mitigated' : 'Inconclusive';
+              const ev = r.evidence;
+              return (
+                <div key={r.node_id} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', fontWeight: 600, fontFamily: 'monospace', color: '#e2e8f0' }}>{r.node_id}</span>
+                      <span style={{ fontSize: '9px', color: '#64748b', marginLeft: '6px' }}>{r.cve_id}</span>
+                      {node?.data?.label && <span style={{ fontSize: '9px', color: '#475569', marginLeft: '6px' }}>— {node.data.label}</span>}
+                    </div>
+                    <span style={{ fontSize: '9px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: badgeBg, color: badgeColor, border: `1px solid ${badgeBorder}`, textTransform: 'uppercase', letterSpacing: '0.3px' }}>{badgeLabel}</span>
+                  </div>
+                  {isProven && ev && (
+                    <div>
+                      <div style={{ fontSize: '9px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '3px' }}>
+                        {ev.method === 'OUT_OF_BAND_CALLBACK' ? 'Out-of-Band Callback (OAST)' : ev.method === 'CRYPTOGRAPHIC_HASH_MATCHING' ? 'Cryptographic Hash' : 'Pattern-Based Output'}
+                      </div>
+                      {ev.method === 'OUT_OF_BAND_CALLBACK' ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 7px', background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '4px', fontSize: '9px', color: '#d8b4fe' }}>
+                          📡 Blind callback confirmed · {ev.technical_details?.oast_domain || 'dns.oast.live'}
+                        </span>
+                      ) : ev.computed_hash ? (
+                        <div style={{ background: '#040609', borderRadius: '5px', padding: '7px 9px', fontFamily: 'monospace', fontSize: '9px', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.12)', wordBreak: 'break-all' }}>
+                          SHA-256: {ev.computed_hash}
+                        </div>
+                      ) : ev.extracted_output ? (
+                        <div style={{ background: '#040609', borderRadius: '5px', padding: '7px 9px', fontFamily: 'monospace', fontSize: '9px', color: '#38bdf8', whiteSpace: 'pre-wrap', border: '1px solid rgba(56,189,248,0.12)' }}>
+                          {ev.extracted_output}
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                  {(isMitigated || isInconclusive) && (
+                    <div style={{ background: 'rgba(100,116,139,0.08)', border: '1px solid rgba(100,116,139,0.15)', padding: '6px 8px', borderRadius: '5px', fontSize: '10px', color: '#64748b', fontStyle: 'italic', lineHeight: 1.4 }}>
+                      {isMitigated
+                        ? `Environmental defenses confirmed blocking node ${r.node_id}. Exploit payload was rejected — mitigation verified.`
+                        : 'No definitive proof of exploitation or mitigation. Absence of proof ≠ absence of risk.'}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {rIsReval && allMitigated && (
+              <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                <button className="btn-primary" style={{ flex: 1, fontSize: '11px', padding: '8px 0' }} onClick={handlePhase3PolicyPreview} disabled={!phase3Policy}>Show Policy Preview</button>
+                <button className="btn-primary" style={{ flex: 1, fontSize: '11px', padding: '8px 0', background: '#14b8a6' }} onClick={() => {
+                  setMessages(prev => [...prev, { sender: 'agent', type: 'phase3_bypass_prompt' }]);
+                  setChatPhase('phase3_bypass');
+                }}>Continue →</button>
+              </div>
+            )}
+            {!rIsReval && !allMitigated && (
+              <div style={{ marginTop: '12px' }}>
+                <button className="btn-primary" style={{ width: '100%', fontSize: '11px', padding: '8px 0' }} onClick={() => {
+                  const el = document.querySelector('.phase3-remediation-scroll');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }} disabled={chatPhase !== 'phase3_remediation_options'}>
+                  View Ranked Mitigations ↓
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      }
 
       default: return null;
     }

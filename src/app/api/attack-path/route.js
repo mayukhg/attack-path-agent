@@ -18,7 +18,21 @@ export async function POST(request) {
   const body = await request.json();
 
   if (body.intent === 'simulate') {
-    return NextResponse.json(simulatePath(advancedScenario, body.pathId));
+    const result = simulatePath(advancedScenario, body.pathId);
+    // Enrich response with validation targets so the chat can delegate to TruConfirm
+    const validationTargets = (result.selectedPath?.nodeIds || [])
+      .map(nodeId => {
+        const node = advancedScenario.nodes.find(n => n.id === nodeId);
+        if (!node?.data?.ipAddress) return null;
+        return {
+          node_id: nodeId,
+          ip_address: node.data.ipAddress,
+          cve_id: node.data.primaryCVE,
+          ingress_port: node.data.ingressPort,
+        };
+      })
+      .filter(Boolean);
+    return NextResponse.json({ ...result, validationTargets });
   }
 
   if (body.intent === 'mitigate') {

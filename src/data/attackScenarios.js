@@ -30,13 +30,18 @@ export const aiEdges = [
 ];
 
 export const advancedNodes = [
-  ...baseNodes,
-  { id: 'H', position: { x: -250, y: 50 }, type: 'base', data: { label: 'External DMZ', assetType: 'LOAD BALANCER', icon: '🌐', status: 'normal', businessValue: 5, owner: 'Network' } },
-  { id: 'I', position: { x: -250, y: 150 }, type: 'base', data: { label: 'Kubelet Exploit', assetType: 'K8S NODE', icon: '☸️', status: 'normal', businessValue: 7, owner: 'Kubernetes Platform' } },
-  { id: 'J', position: { x: 350, y: 50 }, type: 'base', data: { label: 'Phishing Target', assetType: 'EMPLOYEE LAPTOP', icon: '🎣', status: 'normal', businessValue: 4, owner: 'Endpoint Security' } },
-  { id: 'K', position: { x: 350, y: 150 }, type: 'base', data: { label: 'VPN Access', assetType: 'VPN GATEWAY', icon: '🛡️', status: 'normal', businessValue: 7, owner: 'Network' } },
-  { id: 'BR1', position: { x: 250, y: 250 }, type: 'base', data: { label: 'HR Database', assetType: 'INTERNAL DB', icon: '🗄️', status: 'normal', isBlastRadius: true, businessValue: 8, owner: 'HR Apps' }, hidden: true },
-  { id: 'BR2', position: { x: 250, y: 150 }, type: 'base', data: { label: 'Finance API', assetType: 'MICROSERVICE', icon: '⚙️', status: 'normal', isBlastRadius: true, businessValue: 9, owner: 'Finance Apps' }, hidden: true },
+  { id: 'A', position: { x: 50, y: 50 }, type: 'base', data: { label: 'Discovery Asset', assetType: 'DEV ENVIRONMENT', icon: '💻', status: 'normal', businessValue: 3, owner: 'DevOps', ipAddress: '10.1.0.5', primaryCVE: 'CVE-2023-50164', ingressPort: 443 } },
+  { id: 'B', position: { x: 50, y: 150 }, type: 'base', data: { label: 'BOLA Exploit', assetType: 'SHADOW API', icon: '🔗', status: 'normal', businessValue: 8, owner: 'AppSec', ipAddress: '10.1.2.3', primaryCVE: 'CVE-2023-21716', ingressPort: 443 } },
+  { id: 'C', position: { x: 50, y: 250 }, type: 'base', data: { label: 'Web Shell Exec', assetType: 'VM INSTANCE', icon: '🖥️', status: 'normal', businessValue: 6, owner: 'Platform', ipAddress: '10.1.3.7', primaryCVE: 'CVE-2021-44228', ingressPort: 8080 } },
+  { id: 'D', position: { x: -100, y: 350 }, type: 'base', data: { label: 'Escape to Host', assetType: 'CONTAINER', icon: '📦', status: 'normal', businessValue: 6, owner: 'Container Platform', ipAddress: '10.1.4.2', primaryCVE: 'CVE-2022-0847', ingressPort: 2375 } },
+  { id: 'F', position: { x: 200, y: 350 }, type: 'base', data: { label: 'NTLM Extraction', assetType: 'IDENTITY PROV', icon: '🔑', status: 'normal', businessValue: 9, owner: 'IAM', ipAddress: '10.1.5.10', primaryCVE: 'CVE-2023-23397', ingressPort: 445 } },
+  { id: 'G', position: { x: 50, y: 450 }, type: 'crown', data: { label: 'Active Directory Core', status: 'normal', businessValue: 10, owner: 'IAM', ipAddress: '10.1.6.1', primaryCVE: 'CVE-2020-1472', ingressPort: 389 } },
+  { id: 'H', position: { x: -250, y: 50 }, type: 'base', data: { label: 'External DMZ', assetType: 'LOAD BALANCER', icon: '🌐', status: 'normal', businessValue: 5, owner: 'Network', ipAddress: '10.0.0.5', primaryCVE: 'CVE-2023-44487', ingressPort: 443 } },
+  { id: 'I', position: { x: -250, y: 150 }, type: 'base', data: { label: 'Kubelet Exploit', assetType: 'K8S NODE', icon: '☸️', status: 'normal', businessValue: 7, owner: 'Kubernetes Platform', ipAddress: '10.0.1.3', primaryCVE: 'CVE-2023-3676', ingressPort: 10250 } },
+  { id: 'J', position: { x: 350, y: 50 }, type: 'base', data: { label: 'Phishing Target', assetType: 'EMPLOYEE LAPTOP', icon: '🎣', status: 'normal', businessValue: 4, owner: 'Endpoint Security', ipAddress: '10.2.0.15', primaryCVE: 'CVE-2023-36884', ingressPort: 443 } },
+  { id: 'K', position: { x: 350, y: 150 }, type: 'base', data: { label: 'VPN Access', assetType: 'VPN GATEWAY', icon: '🛡️', status: 'normal', businessValue: 7, owner: 'Network', ipAddress: '10.0.2.1', primaryCVE: 'CVE-2023-20198', ingressPort: 443 } },
+  { id: 'BR1', position: { x: 250, y: 250 }, type: 'base', data: { label: 'HR Database', assetType: 'INTERNAL DB', icon: '🗄️', status: 'normal', isBlastRadius: true, businessValue: 8, owner: 'HR Apps', ipAddress: '10.1.7.5', primaryCVE: 'CVE-2023-34362', ingressPort: 5432 }, hidden: true },
+  { id: 'BR2', position: { x: 250, y: 150 }, type: 'base', data: { label: 'Finance API', assetType: 'MICROSERVICE', icon: '⚙️', status: 'normal', isBlastRadius: true, businessValue: 9, owner: 'Finance Apps', ipAddress: '10.1.8.3', primaryCVE: 'CVE-2023-29357', ingressPort: 8443 }, hidden: true },
 ];
 
 export const advancedEdges = [
